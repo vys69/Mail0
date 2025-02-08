@@ -31,17 +31,24 @@ export function MailList({ items, isCompact, onMailClick }: MailListProps) {
   const tags = useAtomValue(tagsAtom);
   const activeTags = tags.filter((tag) => tag.checked);
 
-  const handleMailClick = (mail: Mail) => {
-    setMail({
-      ...mail,
-      selected: mail.id,
-    });
+  const handleMailClick = (selectedMail: Mail) => {
+    if (mail.selected === selectedMail.id) {
+      setMail({
+        selected: null,
+      });
+    } else {
+      setMail({
+        ...mail,
+        selected: selectedMail.id,
+      });
+    }
+
     onMailClick();
   };
 
   return (
-    <ScrollArea className="mt-4 h-[calc(100vh-13rem-1px)]" type="auto">
-      <div className="flex flex-col gap-2 p-4 pt-0">
+    <ScrollArea className="" type="auto">
+      <div className="flex flex-col pt-0">
         {items.map((item) => (
           <Thread key={item.id} id={item.id} />
         ))}
