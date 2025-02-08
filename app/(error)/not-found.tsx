@@ -29,7 +29,7 @@ export function NotFound() {
         <div className="mt-2 flex gap-2">
           <Button
             variant="outline"
-            onClick={() => router.back()}
+            onClick={() => router.push("/mail")}
             className="gap-2 text-muted-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
