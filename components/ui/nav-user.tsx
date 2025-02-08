@@ -47,7 +47,8 @@ export function NavUser() {
                 />
                 <div className="flex min-w-0 flex-col gap-1 leading-none">
                   <span className="flex items-center gap-1 font-semibold">
-                    {session.user.name} <ChevronDown className="size-3 text-muted-foreground" />
+                    <span className="max-w-12 truncate">{session.user.name}</span>{" "}
+                    <ChevronDown className="size-3 text-muted-foreground" />
                   </span>
                 </div>
               </SidebarMenuButton>

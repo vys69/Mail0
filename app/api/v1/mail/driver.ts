@@ -1,5 +1,6 @@
 import { ParsedMessage } from "@/types";
 import { google } from "googleapis";
+import * as he from "he";
 
 interface MailManager {
   get(id: string): Promise<any>;
@@ -33,11 +34,17 @@ const googleDriver = (config: IConfig): MailManager => {
     body: string;
   }): ParsedMessage => {
     const receivedOn = payload.headers.find((h) => h.name === "Date")?.value || "Failed";
+    const sender = payload.headers.find((h) => h.name === "From")?.value || "Failed";
+    const [name, email] = sender.split("<");
     return {
       id,
-      title: snippet,
+      title: he.decode(snippet),
       tags: labelIds,
-      sender: payload.headers.find((h) => h.name === "From")?.value || "Failed",
+      sender: {
+        name: name.replace(/"/g, ""),
+        email: `<${email}`,
+      },
+      unread: labelIds.includes("UNREAD"),
       receivedOn,
     };
   };
@@ -54,7 +61,7 @@ const googleDriver = (config: IConfig): MailManager => {
     },
     get: async (id: string) => {
       const res = await gmail.users.messages.get({ userId: "me", id });
-      return parse(res.data);
+      return parse(res.data as any);
     },
     create: async (data: any) => {
       const res = await gmail.users.messages.send({ userId: "me", requestBody: data });

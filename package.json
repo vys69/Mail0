@@ -41,6 +41,7 @@
     "date-fns": "^4.1.0",
     "drizzle-orm": "^0.39.2",
     "googleapis": "^144.0.0",
+    "he": "^1.2.0",
     "husky": "^9.1.7",
     "jotai": "^2.11.3",
     "lint-staged": "^15.4.3",
@@ -64,6 +65,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
+    "@types/he": "^1.2.3",
     "@types/node": "^22.13.1",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
