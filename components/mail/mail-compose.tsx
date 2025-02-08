@@ -25,7 +25,9 @@ interface MailComposeProps {
   };
 }
 
+import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
 import { Badge } from "../ui/badge";
+
 export function MailCompose({ open, onClose, replyTo }: MailComposeProps) {
   const [attachments, setAttachments] = React.useState<File[]>([]);
   const [messageContent, setMessageContent] = React.useState("");
@@ -82,6 +84,104 @@ export function MailCompose({ open, onClose, replyTo }: MailComposeProps) {
     editorRef.current.focus();
   };
 
+  const MAX_VISIBLE_ATTACHMENTS = 3;
+  const hasHiddenAttachments = attachments.length > MAX_VISIBLE_ATTACHMENTS;
+
+  const truncateFileName = (name: string, maxLength = 15) => {
+    if (name.length <= maxLength) return name;
+    const extIndex = name.lastIndexOf(".");
+    if (extIndex !== -1 && name.length - extIndex <= 5) {
+      // Preserve file extension if possible
+      return `${name.slice(0, maxLength - 5)}...${name.slice(extIndex)}`;
+    }
+    return `${name.slice(0, maxLength)}...`;
+  };
+
+  const renderAttachments = () => {
+    if (attachments.length === 0) return null;
+
+    return (
+      <div className="mx-auto mt-2 flex w-[95%] flex-wrap gap-2">
+        {attachments.slice(0, MAX_VISIBLE_ATTACHMENTS).map((file, index) => (
+          <Badge key={index} variant="secondary">
+            {truncateFileName(file.name)}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="-mr-1 ml-2 h-5 w-5 rounded-full p-0"
+              onClick={(e) => {
+                e.preventDefault();
+                removeAttachment(index);
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </Badge>
+        ))}
+
+        {hasHiddenAttachments && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80">
+                +{attachments.length - MAX_VISIBLE_ATTACHMENTS} more...
+              </Badge>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-80 touch-auto"
+              align="start"
+              onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+              <div className="space-y-2">
+                <div className="px-1">
+                  <h4 className="font-medium leading-none">Attachments</h4>
+                  <p className="text-sm text-muted-foreground">
+                    {attachments.length} files attached
+                  </p>
+                </div>
+                <Separator />
+                <div
+                  className="h-[200px] touch-auto overflow-y-auto overscroll-contain px-1 py-1"
+                  onWheel={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onTouchMove={(e) => e.stopPropagation()}
+                  style={{
+                    WebkitOverflowScrolling: "touch",
+                  }}
+                >
+                  <div className="space-y-1">
+                    {attachments.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between rounded-md p-2 hover:bg-muted"
+                      >
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <Paperclip className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate text-sm">{truncateFileName(file.name)}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 flex-shrink-0"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            removeAttachment(index);
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
+      </div>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-[600px]">
@@ -92,6 +192,7 @@ export function MailCompose({ open, onClose, replyTo }: MailComposeProps) {
           <div className="grid gap-2">
             <div className="relative">
               <Input
+                tabIndex={1}
                 placeholder="To"
                 value={toInput}
                 onChange={(e) => {
@@ -123,27 +224,39 @@ export function MailCompose({ open, onClose, replyTo }: MailComposeProps) {
               defaultValue={replyTo?.subject ? `Re: ${replyTo.subject}` : ""}
               onChange={(e) => setSubject(e.target.value)}
               className="rounded-none border-0 focus-visible:ring-0"
+              tabIndex={2}
             />
           </div>
           <Separator className="mx-auto w-[95%]" />
 
           <div className="flex justify-end p-2">
-            <Button variant="ghost" size="icon" onClick={() => insertFormat("bold")}>
+            <Button tabIndex={-1} variant="ghost" size="icon" onClick={() => insertFormat("bold")}>
               <Bold className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => insertFormat("italic")}>
+            <Button
+              tabIndex={-1}
+              variant="ghost"
+              size="icon"
+              onClick={() => insertFormat("italic")}
+            >
               <Italic className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => insertFormat("list")}>
+            <Button tabIndex={-1} variant="ghost" size="icon" onClick={() => insertFormat("list")}>
               <List className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => insertFormat("ordered-list")}>
+            <Button
+              tabIndex={-1}
+              variant="ghost"
+              size="icon"
+              onClick={() => insertFormat("ordered-list")}
+            >
               <ListOrdered className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => insertFormat("link")}>
+            <Button tabIndex={-1} variant="ghost" size="icon" onClick={() => insertFormat("link")}>
               <Link2 className="h-4 w-4" />
             </Button>
             <Button
+              tabIndex={-1}
               variant="ghost"
               size="icon"
               onClick={() => {
@@ -174,31 +287,14 @@ export function MailCompose({ open, onClose, replyTo }: MailComposeProps) {
             onInput={(e) => setMessageContent(e.currentTarget.innerHTML)}
             role="textbox"
             aria-multiline="true"
+            tabIndex={3}
           />
-          {attachments.length > 0 && (
-            <div className="mx-auto mt-2 flex w-[95%] flex-wrap gap-2">
-              {attachments.map((file, index) => (
-                <Badge key={index} variant="secondary">
-                  {file.name}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="-mr-1 ml-2 h-5 w-5 rounded-full p-0"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      removeAttachment(index);
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </Badge>
-              ))}
-            </div>
-          )}
+          {renderAttachments()}
 
           <div className="mx-auto mt-4 flex w-[95%] items-center justify-between">
             <label className="cursor-pointer">
               <Button
+                tabIndex={4}
                 variant="outline"
                 size="sm"
                 onClick={(e) => {
@@ -214,10 +310,11 @@ export function MailCompose({ open, onClose, replyTo }: MailComposeProps) {
             </label>
 
             <div className="flex gap-2">
-              <Button variant="outline" onClick={onClose}>
+              <Button tabIndex={5} variant="outline" onClick={onClose}>
                 Save as draft
               </Button>
               <Button
+                tabIndex={6}
                 onClick={() => {
                   // TODO: Implement send functionality
                   onClose();

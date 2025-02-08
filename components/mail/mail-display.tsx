@@ -11,6 +11,7 @@ import {
   Trash2,
   BellOff,
   X,
+  Lock,
 } from "lucide-react";
 import { nextSaturday } from "date-fns/nextSaturday";
 import { addHours } from "date-fns/addHours";
@@ -47,6 +48,16 @@ export function MailDisplay({ mail }: MailDisplayProps) {
 
   const removeAttachment = (index: number) => {
     setAttachments(attachments.filter((_, i) => i !== index));
+  };
+
+  const truncateFileName = (name: string, maxLength = 15) => {
+    if (name.length <= maxLength) return name;
+    const extIndex = name.lastIndexOf(".");
+    if (extIndex !== -1 && name.length - extIndex <= 5) {
+      // Preserve file extension if possible
+      return `${name.slice(0, maxLength - 5)}...${name.slice(extIndex)}`;
+    }
+    return `${name.slice(0, maxLength)}...`;
   };
 
   // Update the muted state when the mail prop changes.
@@ -193,15 +204,51 @@ export function MailDisplay({ mail }: MailDisplayProps) {
                 </AvatarFallback>
               </Avatar>
               <div className="grid gap-1">
-                <div className="font-semibold">{mail.name}</div>
+                <div className="font-semibold">
+                  {mail.name} <span className="text-muted-foreground">&lt;{mail.email}&gt;</span>
+                </div>
                 {/* Display the subject with the muted icon if isMuted is true */}
                 <div className="line-clamp-1 flex items-center text-xs">
                   {mail.subject}
                   {isMuted && <BellOff className="ml-2 h-4 w-4 text-muted-foreground" />}
                 </div>
-                <div className="line-clamp-1 text-xs">
-                  <span className="font-medium">Reply-To:</span> {mail.email}
-                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <span className="cursor-pointer text-xs underline">Details</span>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[320px] space-y-2" align="start">
+                    {/* TODO: Content is currently dummy and uses mail.email for all of them. need to add other values to email type */}
+                    <div className="text-xs">
+                      <span className="font-medium text-muted-foreground">From:</span> {mail.email}
+                    </div>
+                    <div className="text-xs">
+                      <span className="font-medium text-muted-foreground">Reply-To:</span>{" "}
+                      {mail.email}
+                    </div>
+                    <div className="text-xs">
+                      <span className="font-medium text-muted-foreground">To:</span> {mail.email}
+                    </div>
+                    <div className="text-xs">
+                      <span className="font-medium text-muted-foreground">Cc:</span> {mail.email}
+                    </div>
+                    <div className="text-xs">
+                      <span className="font-medium text-muted-foreground">Date:</span>{" "}
+                      {format(new Date(mail.date), "PPpp")}
+                    </div>
+                    <div className="text-xs">
+                      <span className="font-medium text-muted-foreground">Mailed-By:</span>{" "}
+                      {mail.email}
+                    </div>
+                    <div className="text-xs">
+                      <span className="font-medium text-muted-foreground">Signed-By:</span>{" "}
+                      {mail.email}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs">
+                      <span className="font-medium text-muted-foreground">Security:</span>{" "}
+                      <Lock className="h-3 w-3" /> {mail.email}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             {mail.date && (
@@ -232,7 +279,7 @@ export function MailDisplay({ mail }: MailDisplayProps) {
                   <div className="flex flex-wrap gap-2">
                     {attachments.map((file, index) => (
                       <Badge key={index} variant="default">
-                        {file.name}
+                        {truncateFileName(file.name)}
                         <Button
                           variant="ghost"
                           size="icon"
