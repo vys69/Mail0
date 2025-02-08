@@ -25,8 +25,6 @@ import { tagsAtom } from "@/components/mail/use-tags";
 import { SidebarToggle } from "../ui/sidebar-toggle";
 import { type Mail } from "@/components/mail/data";
 import { useThreads } from "@/hooks/use-threads";
-import Filters from "@/components/mail/filters";
-import { Input } from "@/components/ui/input";
 import { useAtomValue } from "jotai";
 
 interface MailProps {
@@ -43,8 +41,7 @@ interface MailProps {
 }
 
 export function Mail({ mails }: MailProps) {
-  const { data: threadsResponse } = useThreads("inbox");
-
+  const { data: threadsResponse, isLoading } = useThreads("inbox");
   const [mail] = useMail();
   const [isCompact, setIsCompact] = React.useState(false);
   const tags = useAtomValue(tagsAtom);
@@ -112,44 +109,15 @@ export function Mail({ mails }: MailProps) {
                     </DropdownMenu>
                   </div>
                 </div>
-                <div className="bg-background backdrop-blur supports-[backdrop-filter]:bg-background">
-                  <form className="flex space-x-1.5 p-4 pt-0">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input placeholder="Search" className="pl-8" />
-                    </div>
-                    <div>
-                      <Filters />
-                    </div>
-                  </form>
-                </div>
 
-                <Separator />
+                <Separator className="mt-2" />
 
-                <TabsContent value="all" className="m-0">
-                  {!threadsResponse ? (
-                    <div className="p-8 text-center text-muted-foreground">
-                      Loading your messages...
-                    </div>
-                  ) : threadsResponse?.messages.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground">
-                      No messages found | Clear filters to see more results
-                    </div>
+                <div className="h-[calc(93vh)]">
+                  {isLoading ? (
+                    <p>Loading</p>
                   ) : (
                     <MailList
-                      items={threadsResponse.messages}
-                      isCompact={isCompact}
-                      onMailClick={() => setIsDialogOpen(true)}
-                    />
-                  )}
-                </TabsContent>
-
-                <TabsContent value="unread" className="m-0">
-                  {filteredMails.filter((item) => !item.read).length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground">No unread messages</div>
-                  ) : (
-                    <MailList
-                      items={filteredMails.filter((item) => !item.read)}
+                      items={threadsResponse?.messages || []}
                       isCompact={isCompact}
                       onMailClick={() => setIsDialogOpen(true)}
                     />

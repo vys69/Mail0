@@ -22,7 +22,7 @@ interface MailListProps {
 const Thread = ({ id }: { id: string }) => {
   const [mail, setMail] = useMail();
   const { data } = useThread(id);
-  return data ? null : <Skeleton />;
+  return data ? <p>Test</p> : <Skeleton />;
 };
 
 export function MailList({ items, isCompact, onMailClick }: MailListProps) {
