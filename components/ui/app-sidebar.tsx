@@ -14,7 +14,6 @@ import {
   Code,
   ChartLine,
   Pencil,
-  FolderX,
 } from "lucide-react";
 import { Gmail, Outlook, Vercel } from "@/components/icons/icons";
 import { SidebarData } from "@/types";
@@ -83,7 +82,7 @@ const data: SidebarData = {
         {
           title: "Junk",
           url: "/junk",
-          icon: FolderX,
+          icon: Trash2,
           badge: 23,
         },
         {
@@ -143,7 +142,7 @@ const data: SidebarData = {
         },
         {
           title: "Developers",
-          url: "/developer",
+          url: "#",
           icon: Code,
         },
       ],
