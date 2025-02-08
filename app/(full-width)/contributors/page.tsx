@@ -75,21 +75,21 @@ export default function OpenPage() {
               <GitFork className="h-5 w-5 text-muted-foreground" />
               <span className="text-2xl font-semibold">{repoStats.forks}</span>
             </div>
-            <p className="text-sm text-muted-foreground">Forks</p>
+            <p className="break-words text-sm text-muted-foreground">Forks</p>
           </div>
           <div className="space-y-1 rounded-lg border p-4">
             <div className="flex items-center justify-center gap-1">
               <Star className="h-5 w-5 text-muted-foreground" />
               <span className="text-2xl font-semibold">{repoStats.stars}</span>
             </div>
-            <p className="text-sm text-muted-foreground">Stars</p>
+            <p className="break-words text-sm text-muted-foreground">Stars</p>
           </div>
           <div className="space-y-1 rounded-lg border p-4">
             <div className="flex items-center justify-center gap-1">
               <Users className="h-5 w-5 text-muted-foreground" />
               <span className="text-2xl font-semibold">{contributors.length}</span>
             </div>
-            <p className="text-sm text-muted-foreground">Contributors</p>
+            <p className="break-words text-sm text-muted-foreground">Contributors</p>
           </div>
         </div>
       </div>
