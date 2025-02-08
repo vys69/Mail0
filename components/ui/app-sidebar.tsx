@@ -27,10 +27,10 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { MailCompose } from "../mail/mail-compose";
-import { Gmail, Outlook, Vercel } from "@/components/icons/icons";
-import React, { Suspense } from "react";
 import { useOpenComposeModal } from "@/hooks/use-open-compose-modal";
+import { Gmail, Outlook, Vercel } from "@/components/icons/icons";
+import { MailCompose } from "../mail/mail-compose";
+import React, { Suspense } from "react";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
 import { Button } from "./button";
