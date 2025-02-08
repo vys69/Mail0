@@ -8,7 +8,9 @@ import { BellOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { formatDate } from "@/utils/format-date";
+import { useThread } from "@/hooks/use-threads";
 import { tagsAtom, Tag } from "./use-tags";
+import { Skeleton } from "../ui/skeleton";
 import { useAtomValue } from "jotai";
 
 interface MailListProps {
@@ -16,6 +18,12 @@ interface MailListProps {
   isCompact: boolean;
   onMailClick: () => void;
 }
+
+const Thread = ({ id }: { id: string }) => {
+  const [mail, setMail] = useMail();
+  const { data } = useThread(id);
+  return data ? null : <Skeleton />;
+};
 
 export function MailList({ items, isCompact, onMailClick }: MailListProps) {
   const [mail, setMail] = useMail();
@@ -35,70 +43,7 @@ export function MailList({ items, isCompact, onMailClick }: MailListProps) {
     <ScrollArea className="mt-4 h-[calc(100vh-13rem-1px)]" type="auto">
       <div className="flex flex-col gap-2 p-4 pt-0">
         {items.map((item) => (
-          <div
-            key={item.id}
-            className={cn(
-              "flex cursor-pointer flex-col items-start rounded-lg border p-3 text-left text-sm transition-all hover:bg-accent",
-              mail.selected === item.id && "bg-muted hover:opacity-100",
-              isCompact && mail.selected !== item.id && item.read ? "gap-0" : "gap-2",
-              item.read && mail.selected !== item.id
-                ? "opacity-70 hover:opacity-100"
-                : "opacity-100",
-            )}
-            onClick={() => handleMailClick(item)}
-          >
-            <div className="flex w-full flex-col gap-1">
-              <div className="flex items-center">
-                <div
-                  className={cn(
-                    "flex gap-2",
-                    isCompact && mail.selected !== item.id ? "items-center" : "flex-col flex-wrap",
-                  )}
-                >
-                  <div className="flex w-32 items-center gap-2 2xl:w-40">
-                    <div className={cn(item.read ? "font-normal" : "font-bold")}>{item.name}</div>
-                    {item.muted && <BellOff className="h-4 w-4 text-muted-foreground" />}
-                    {!item.read && <span className="flex h-2 w-2 rounded-full bg-blue-600" />}
-                  </div>
-
-                  <div
-                    className={cn(
-                      "max-w-32 truncate text-xs md:max-w-full",
-                      item.read ? "font-normal" : "font-bold",
-                      isCompact && mail.selected !== item.id ? "truncate" : "max-w-full",
-                    )}
-                  >
-                    {item.subject}
-                  </div>
-                </div>
-
-                <div
-                  className={cn(
-                    "ml-auto whitespace-nowrap text-right text-xs",
-                    mail.selected === item.id ? "text-foreground" : "text-muted-foreground",
-                  )}
-                >
-                  {formatDate(item.date)}
-                </div>
-              </div>
-            </div>
-
-            <div
-              className={cn(
-                "line-clamp-2 select-none text-xs text-muted-foreground transition-all",
-                isCompact && mail.selected !== item.id ? "h-0" : "h-8",
-              )}
-            >
-              {item.text.substring(0, 300)}
-            </div>
-
-            <MailLabels
-              labels={item.labels}
-              activeTags={activeTags}
-              isCompact={isCompact}
-              isSelected={mail.selected === item.id}
-            />
-          </div>
+          <Thread key={item.id} id={item.id} />
         ))}
       </div>
     </ScrollArea>

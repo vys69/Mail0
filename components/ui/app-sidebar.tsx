@@ -15,8 +15,6 @@ import {
   ChartLine,
   Pencil,
 } from "lucide-react";
-import { Gmail, Outlook, Vercel } from "@/components/icons/icons";
-import { SidebarData } from "@/types";
 import React from "react";
 
 import {
@@ -29,36 +27,11 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-// import { AccountSwitcher } from "./account-switcher";
 import { MailCompose } from "../mail/mail-compose";
-import { SidebarToggle } from "./sidebar-toggle";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
 
-const data: SidebarData = {
-  // TODO: Dynamically render user data based on auth info
-  user: {
-    name: "nizzy",
-    email: "nizabizaher@gmail.com",
-    avatar: "/profile.jpg",
-  },
-  accounts: [
-    {
-      name: "Gmail",
-      logo: Gmail,
-      email: "nizabizaher@gmail.com",
-    },
-    {
-      name: "Hotmail",
-      logo: Vercel,
-      email: "nizabizaher@hotmail.com",
-    },
-    {
-      name: "Outlook",
-      logo: Outlook,
-      email: "nizabizaher@microsoft.com",
-    },
-  ],
+const data = {
   navMain: [
     {
       title: "Mail",
@@ -153,7 +126,6 @@ const data: SidebarData = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [composeOpen, setComposeOpen] = React.useState(false);
-
   const handleComposeClick = React.useCallback(() => {
     setComposeOpen(true);
   }, []);
@@ -179,8 +151,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <>
       <Sidebar collapsible="icon" {...props}>
         <SidebarHeader className="mt-1">
-          {/* <AccountSwitcher accounts={data.accounts} /> */}
-          <SidebarToggle className="hidden w-fit md:block" />
           <ComposeButton />
         </SidebarHeader>
         <SidebarContent>

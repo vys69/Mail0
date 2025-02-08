@@ -19,6 +19,7 @@ import { useFilteredMails } from "@/hooks/use-filtered-mails";
 import { tagsAtom } from "@/components/mail/use-tags";
 import { SidebarToggle } from "../ui/sidebar-toggle";
 import { type Mail } from "@/components/mail/data";
+import { useThreads } from "@/hooks/use-threads";
 import Filters from "@/components/mail/filters";
 import { Input } from "@/components/ui/input";
 import { useAtomValue } from "jotai";
@@ -37,6 +38,8 @@ interface MailProps {
 }
 
 export function Mail({ mails }: MailProps) {
+  const { data: threadsResponse } = useThreads("inbox");
+
   const [mail] = useMail();
   const [isCompact, setIsCompact] = React.useState(false);
   const tags = useAtomValue(tagsAtom);
@@ -102,13 +105,17 @@ export function Mail({ mails }: MailProps) {
                 <Separator />
 
                 <TabsContent value="all" className="m-0">
-                  {filteredMails.length === 0 ? (
+                  {!threadsResponse ? (
+                    <div className="p-8 text-center text-muted-foreground">
+                      Loading your messages...
+                    </div>
+                  ) : threadsResponse?.messages.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground">
                       No messages found | Clear filters to see more results
                     </div>
                   ) : (
                     <MailList
-                      items={filteredMails}
+                      items={threadsResponse.messages}
                       isCompact={isCompact}
                       onMailClick={() => setIsDialogOpen(true)}
                     />
