@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import { Gmail } from "../icons/icons";
 import { Button } from "./button";
 import Image from "next/image";
+import { toast } from "sonner";
 
 export function NavUser() {
   const { data: session } = useSession();

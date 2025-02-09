@@ -14,8 +14,6 @@ import {
   Tag,
   Code,
   ChartLine,
-  SquarePen,
-  Search,
 } from "lucide-react";
 import {
   Sidebar,
@@ -33,7 +31,6 @@ import { MailCompose } from "../mail/mail-compose";
 import React, { Suspense } from "react";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
-import { Button } from "./button";
 
 const data = {
   navMain: [
@@ -48,7 +45,7 @@ const data = {
         },
         {
           title: "Drafts",
-          url: "/mail/under-construction/drafts",
+          url: "/draft",
           icon: FileText,
           badge: 9,
         },
@@ -133,17 +130,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <>
       <Sidebar collapsible="icon" {...props}>
         <SidebarHeader className="mt-2 flex items-center justify-between gap-2">
-          <div className="flex w-full items-center gap-2">
-            <NavUser />
-            <div className="flex items-center">
-              <Suspense>
-                <ComposeButton />
-              </Suspense>
-              <Button variant="ghost" className="h-fit px-2">
-                <Search />
-              </Button>
-            </div>
-          </div>
+          <NavUser />
         </SidebarHeader>
         <SidebarContent>
           <NavMain items={data.navMain} />
@@ -151,15 +138,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarRail />
       </Sidebar>
     </>
-  );
-}
-
-function ComposeButton() {
-  const { open } = useOpenComposeModal();
-
-  return (
-    <Button onClick={open} variant="ghost" className="md:h-fit md:px-2">
-      <SquarePen />
-    </Button>
   );
 }
