@@ -36,23 +36,18 @@ interface MailProps {
     email: string;
     icon: React.ReactNode;
   }[];
-  mails: Mail[];
+  folder: string;
   defaultLayout: number[] | undefined;
   defaultCollapsed?: boolean;
   navCollapsedSize: number;
   muted?: boolean;
 }
 
-export function Mail({ mails }: MailProps) {
-  const { data: threadsResponse, isLoading } = useThreads("inbox");
+export function Mail({ folder }: MailProps) {
+  const { data: threadsResponse, isLoading } = useThreads(folder);
   const [mail, setMail] = useMail();
   const [isCompact, setIsCompact] = React.useState(false);
-  const tags = useAtomValue(tagsAtom);
-  const activeTags = tags.filter((tag) => tag.checked);
 
-  const filteredMails = useFilteredMails(mails, activeTags);
-
-  const [, setIsDialogOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [filterValue, setFilterValue] = useState<"all" | "unread">("all");
   const [open, setOpen] = useState(false);
@@ -82,11 +77,6 @@ export function Mail({ mails }: MailProps) {
     setOpen(false);
     setMail({ selected: null });
   }, [setMail]);
-
-  const selectedMail = useMemo(
-    () => filteredMails.find((item) => item.id === mail.selected) || null,
-    [filteredMails, mail.selected],
-  );
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -140,11 +130,7 @@ export function Mail({ mails }: MailProps) {
                   {isLoading ? (
                     <p>Loading</p>
                   ) : (
-                    <MailList
-                      items={threadsResponse?.messages || []}
-                      isCompact={isCompact}
-                      onMailClick={() => setIsDialogOpen(true)}
-                    />
+                    <MailList items={threadsResponse?.messages || []} />
                   )}
                 </div>
               </div>
@@ -156,7 +142,7 @@ export function Mail({ mails }: MailProps) {
               <ResizableHandle withHandle />
               <ResizablePanel defaultSize={75} minSize={25}>
                 <div className="hidden h-full flex-1 overflow-y-auto md:block">
-                  <MailDisplay mail={selectedMail} onClose={handleClose} />
+                  <MailDisplay mail={mail.selected} onClose={handleClose} />
                 </div>
               </ResizablePanel>
             </>
@@ -171,7 +157,7 @@ export function Mail({ mails }: MailProps) {
                 <DrawerTitle>Email Details</DrawerTitle>
               </DrawerHeader>
               <div className="flex h-full flex-col overflow-hidden">
-                <MailDisplay mail={selectedMail} onClose={handleClose} isMobile={true} />
+                <MailDisplay mail={mail.selected} onClose={handleClose} isMobile={true} />
               </div>
             </DrawerContent>
           </Drawer>

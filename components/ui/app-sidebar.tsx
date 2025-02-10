@@ -33,18 +33,18 @@ const data = {
         },
         {
           title: "Drafts",
-          url: "/draft",
+          url: "/mail/draft",
           icon: FileText,
           badge: 9,
         },
         {
           title: "Sent",
-          url: "/mail/under-construction/sent",
+          url: "/mail/sent",
           icon: SendHorizontal,
         },
         {
           title: "Junk",
-          url: "/mail/under-construction/junk",
+          url: "/mail/junk",
           icon: ArchiveX,
           badge: 23,
         },

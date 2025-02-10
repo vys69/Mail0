@@ -31,20 +31,21 @@ import { Badge } from "../ui/badge";
 import Image from "next/image";
 
 interface MailDisplayProps {
-  mail: Mail | null;
+  mail: string | null;
   onClose?: () => void;
   isMobile?: boolean;
 }
 
 export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
   const [, setMail] = useMail();
-  const [currentMail, setCurrentMail] = useState<Mail | null>(mail);
+  const [currentMail, setCurrentMail] = useState<Mail | null>();
   const [isMuted, setIsMuted] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
-    setCurrentMail(mail);
+    // find email and parse body and set it
+    // setCurrentMail(mail);
   }, [mail]);
 
   useEffect(() => {
