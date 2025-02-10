@@ -6,7 +6,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, SlidersHorizontal, CalendarIcon, XIcon } from "lucide-react";
+import { Search, SlidersHorizontal, CalendarIcon } from "lucide-react";
 import { useSearchValue } from "@/hooks/use-search-value";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
@@ -15,9 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format, subDays } from "date-fns";
 import { useForm } from "react-hook-form";
-import { use, useState } from "react";
 import { Form } from "../ui/form";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 const inboxes = ["All Mail", "Inbox", "Drafts", "Sent", "Spam", "Trash", "Archive"];
 
@@ -67,7 +67,7 @@ function DateFilter() {
 }
 
 export function SearchBar() {
-  const [_, setSearchValue] = useSearchValue();
+  const [, setSearchValue] = useSearchValue();
   const form = useForm({
     defaultValues: {
       subject: "",

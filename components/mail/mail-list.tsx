@@ -1,14 +1,11 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { InitialThread, ParsedMessage } from "@/types";
-import { Avatar, AvatarFallback } from "../ui/avatar";
 import { useMail } from "@/components/mail/use-mail";
 import { useThread } from "@/hooks/use-threads";
 import { ComponentProps, useMemo } from "react";
-import { Mail } from "@/components/mail/data";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "../ui/skeleton";
+import { InitialThread } from "@/types";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
 
 interface MailListProps {
   items: InitialThread[];

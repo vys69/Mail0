@@ -21,16 +21,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useOpenComposeModal } from "@/hooks/use-open-compose-modal";
-import { useFilteredMails } from "@/hooks/use-filtered-mails";
 import { useMediaQuery } from "../../hooks/use-media-query";
 import { useSearchValue } from "@/hooks/use-search-value";
-import { tagsAtom } from "@/components/mail/use-tags";
 import { SidebarToggle } from "../ui/sidebar-toggle";
 import { type Mail } from "@/components/mail/data";
 import { useSearchParams } from "next/navigation";
 import { useThreads } from "@/hooks/use-threads";
 import { SearchBar } from "./search-bar";
-import { useAtomValue } from "jotai";
 
 interface MailProps {
   accounts: {

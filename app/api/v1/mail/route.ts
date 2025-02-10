@@ -32,6 +32,6 @@ export const GET = async ({ headers, nextUrl }: NextRequest) => {
   );
 };
 
-export const POST = async ({ headers }: NextRequest) => {
+export const POST = async () => {
   return new Response("Hello World");
 };

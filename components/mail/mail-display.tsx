@@ -38,7 +38,7 @@ interface MailDisplayProps {
 
 export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
   const [, setMail] = useMail();
-  const [currentMail, setCurrentMail] = useState<Mail | null>();
+  const [currentMail] = useState<Mail | null>();
   const [isMuted, setIsMuted] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
