@@ -149,7 +149,7 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem>
-                  <ArchiveX className="mr-2 h-4 w-4" /> Move to junk
+                  <ArchiveX className="mr-2 h-4 w-4" /> Move to spam
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <ReplyAll className="mr-2 h-4 w-4" /> Reply all
