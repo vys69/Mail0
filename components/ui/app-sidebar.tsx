@@ -14,6 +14,11 @@ import {
   Tag,
   Code,
   ChartLine,
+  SquareTerminal,
+  FileCode,
+  Cable,
+  Box,
+  ScrollText,
 } from "lucide-react";
 import { Gmail, Outlook, Vercel } from "@/components/icons/icons";
 import { SidebarData } from "@/types";
@@ -131,8 +136,35 @@ const data: SidebarData = {
         },
         {
           title: "Developers",
-          url: "/mail/under-construction/developers",
+          url: "/developer",
           icon: Code,
+          subItems: [
+            {
+              title: "API Documentation",
+              url: "/mail/under-construction/api",
+              icon: FileCode,
+            },
+            {
+              title: "SDK",
+              url: "/mail/under-construction/sdk",
+              icon: Box,
+            },
+            {
+              title: "Webhooks",
+              url: "/mail/under-construction/webhooks",
+              icon: Cable,
+            },
+            {
+              title: "Contributing",
+              url: "/mail/under-construction/contributing",
+              icon: ScrollText,
+            },
+            {
+              title: "CLI Tools",
+              url: "/mail/under-construction/cli",
+              icon: SquareTerminal,
+            },
+          ],
         },
       ],
     },
