@@ -27,6 +27,7 @@ import { tagsAtom } from "@/components/mail/use-tags";
 import { SidebarToggle } from "../ui/sidebar-toggle";
 import { type Mail } from "@/components/mail/data";
 import { useThreads } from "@/hooks/use-threads";
+import { SearchBar } from "./search-bar";
 import { useAtomValue } from "jotai";
 
 interface MailProps {
@@ -44,7 +45,7 @@ interface MailProps {
 
 export function Mail({ mails }: MailProps) {
   const { data: threadsResponse, isLoading } = useThreads("inbox");
-  const [mail] = useMail();
+  const [mail, setMail] = useMail();
   const [isCompact, setIsCompact] = React.useState(false);
   const tags = useAtomValue(tagsAtom);
   const activeTags = tags.filter((tag) => tag.checked);

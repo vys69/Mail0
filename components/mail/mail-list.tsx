@@ -8,6 +8,7 @@ import { Mail } from "@/components/mail/data";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "../ui/skeleton";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface MailListProps {
   items: InitialThread[];
@@ -42,24 +43,26 @@ const Thread = ({ id }: { id: string }) => {
       onClick={handleMailClick}
       key={data.id}
       className={cn(
-        "group cursor-pointer items-start border-b p-4 text-left text-sm transition-all hover:bg-accent",
+        "group flex cursor-pointer flex-col items-start border-b px-4 py-4 text-left text-sm transition-all hover:bg-accent",
         data.unread && "font-bold",
         isMailSelected ? "bg-accent" : "",
       )}
     >
-      <div className="flex flex-col gap-4">
-        <div className="flex gap-2">
-          <Avatar>
-            <AvatarFallback className="border bg-card">
-              <p>{data.sender.name[0]}</p>
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <p>{data.sender.name}</p>
-            <p className="text-sm text-muted-foreground">{data.sender.email}</p>
+      <div className="flex w-full flex-col gap-1">
+        <div className="flex w-full items-center justify-between">
+          <div className="flex items-center gap-2">
+            <p className="text-md font-medium opacity-70 group-hover:opacity-100">
+              {data.sender.name}
+            </p>
           </div>
+          <p className="pr-2 text-xs font-normal opacity-70 group-hover:opacity-100">Feb 10</p>
         </div>
-        <p className="max-w-[95%] truncate">{data.title}</p>
+        <p className="mt-1 text-xs font-medium opacity-70 group-hover:opacity-100">
+          Meeting tommorrow
+        </p>
+        <p className="text-[12px] font-medium leading-tight opacity-40 group-hover:opacity-100">
+          {data.title}
+        </p>
       </div>
       <MailLabels labels={data.tags} />
     </div>
@@ -86,8 +89,8 @@ function MailLabels({ labels }: { labels: string[] }) {
   return (
     <div className={cn("mt-2 flex select-none items-center gap-2")}>
       {labels.map((label) => (
-        <Badge key={label} className="hover:bg-card" variant={getDefaultBadgeStyle(label)}>
-          {label}
+        <Badge key={label} className="rounded-md" variant={getDefaultBadgeStyle(label)}>
+          <p className="text-xs font-medium lowercase opacity-70">{label.replace(/_/g, " ")}</p>
         </Badge>
       ))}
     </div>
