@@ -26,7 +26,7 @@ export function NotFound() {
         </div>
 
         {/* Buttons */}
-        <div className="mt-2 flex gap-2">
+        <div className="mt-2 flex justify-center gap-2">
           <Button
             variant="outline"
             onClick={() => router.back()}
