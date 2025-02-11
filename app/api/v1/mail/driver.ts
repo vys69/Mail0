@@ -69,7 +69,24 @@ const googleDriver = (config: IConfig): MailManager => {
         labelIds,
         maxResults,
       });
-      return res.data;
+
+      // Fetch minimal metadata for each message
+      const messages = await Promise.all(
+        (res.data.messages || [])
+          .map(async (message) => {
+            if (!message.id) return null;
+            const msg = await gmail.users.messages.get({
+              userId: "me",
+              id: message.id,
+              format: "metadata",
+              metadataHeaders: ["From", "Subject", "Date"],
+            });
+            return parse(msg.data as any);
+          })
+          .filter((msg): msg is NonNullable<typeof msg> => msg !== null),
+      );
+
+      return { ...res.data, messages };
     },
     get: async (id: string) => {
       const res = await gmail.users.messages.get({

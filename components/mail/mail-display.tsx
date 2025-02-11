@@ -99,17 +99,36 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
   const [copySuccess, setCopySuccess] = useState(false);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
+  // Cache for processed HTML blobs
+  useEffect(() => {
+    const blobCache = new Map<string, string>();
+
+    return () => {
+      // Cleanup blobs on unmount
+      blobCache.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
+
   useEffect(() => {
     async function fetchEmail() {
       if (!mail) return;
 
       try {
+        const cacheKey = `email-${mail}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+
+        if (cachedData) {
+          console.log(`📦 Using cached email data for ${mail}`);
+          setEmailData(JSON.parse(cachedData));
+          return;
+        }
+
         const response = await fetch(`/api/v1/mail/${mail}`);
         if (!response.ok) throw new Error("Failed to fetch email");
 
         const data = await response.json();
+        sessionStorage.setItem(cacheKey, JSON.stringify(data));
         setEmailData(data);
-        console.log("Email data:", data); // For debugging
       } catch (error) {
         console.error("Error fetching email:", error);
       }
@@ -128,6 +147,17 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
     if (!emailData?.body) return;
 
     try {
+      // Check if we have a cached blob URL for this email
+      const blobCacheKey = `blob-${emailData.id}`;
+      const cachedBlobUrl = sessionStorage.getItem(blobCacheKey);
+
+      if (cachedBlobUrl) {
+        console.log(`📦 Using cached HTML blob for email ${emailData.id}`);
+        setBlobUrl(cachedBlobUrl);
+        return;
+      }
+
+      console.log(`🔄 Processing HTML for email ${emailData.id}...`);
       const decoded = fromBinary(emailData.body);
       const sanitized = sanitizeHtml(decoded, {
         allowedTags: ALLOWED_TAGS,
@@ -174,15 +204,23 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
       // Create a blob URL for the content
       const blob = new Blob([htmlDocument], { type: "text/html" });
       const url = URL.createObjectURL(blob);
+
+      // Cache the blob URL
+      sessionStorage.setItem(blobCacheKey, url);
+      console.log(`✨ Cached HTML blob for email ${emailData.id}`);
+
       setBlobUrl(url);
 
       return () => {
-        if (url) URL.revokeObjectURL(url);
+        if (url) {
+          URL.revokeObjectURL(url);
+          sessionStorage.removeItem(blobCacheKey);
+        }
       };
     } catch (error) {
       console.error("Error processing email:", error);
     }
-  }, [emailData?.body]);
+  }, [emailData?.body, emailData?.id]);
 
   const handleClose = useCallback(() => {
     onClose?.();
@@ -350,17 +388,27 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
 
             <div className="h-full w-full p-0">
               <div className="flex h-full w-full flex-1 flex-col p-0">
-                <iframe
-                  src={blobUrl}
-                  className="w-full flex-1 border-none"
-                  title="Email Content"
-                  sandbox="allow-same-origin allow-scripts"
-                  style={{
-                    minHeight: "100%",
-                    height: "100%",
-                    overflow: "auto",
-                  }}
-                />
+                {blobUrl ? (
+                  <iframe
+                    key={emailData.id}
+                    src={blobUrl}
+                    className="w-full flex-1 border-none opacity-100 transition-opacity duration-200"
+                    title="Email Content"
+                    sandbox="allow-same-origin"
+                    style={{
+                      minHeight: "500px",
+                      height: "100%",
+                      overflow: "auto",
+                    }}
+                  />
+                ) : (
+                  <div
+                    className="flex h-[500px] w-full items-center justify-center"
+                    style={{ minHeight: "500px" }}
+                  >
+                    <div className="h-32 w-32 animate-pulse rounded-full bg-secondary" />
+                  </div>
+                )}
               </div>
             </div>
           </div>

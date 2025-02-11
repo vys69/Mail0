@@ -43,4 +43,12 @@ export interface ParsedMessage {
 
 export interface InitialThread {
   id: string;
+  title: string;
+  tags: string[];
+  sender: {
+    name: string;
+    email: string;
+  };
+  receivedOn: string;
+  unread: boolean;
 }
