@@ -11,11 +11,11 @@ export const GET = async ({ headers, nextUrl }: NextRequest) => {
   const [foundAccount] = await db.select().from(account).where(eq(account.userId, session.user.id));
   if (!foundAccount?.accessToken || !foundAccount.refreshToken)
     return new Response("Unauthorized, reconnect", { status: 402 });
-  const gmail = createDriver("google", {
+  const driver = createDriver(foundAccount.providerId, {
     auth: {
       access_token: foundAccount.accessToken,
       refresh_token: foundAccount.refreshToken,
     },
   });
-  return new Response(JSON.stringify(await gmail.count()));
+  return new Response(JSON.stringify(await driver.count()));
 };

@@ -15,12 +15,12 @@ export const GET = async (
   const [foundAccount] = await db.select().from(account).where(eq(account.userId, session.user.id));
   if (!foundAccount?.accessToken || !foundAccount.refreshToken)
     return new Response("Unauthorized", { status: 401 });
-  const gmail = createDriver("google", {
+  const driver = createDriver(foundAccount.providerId, {
     auth: {
       access_token: foundAccount.accessToken,
       refresh_token: foundAccount.refreshToken,
     },
   });
-  const res = await gmail.get(id);
+  const res = await driver.get(id);
   return new Response(JSON.stringify(res));
 };

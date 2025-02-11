@@ -1,3 +1,10 @@
+import {
+  ALLOWED_HTML_TAGS,
+  ALLOWED_HTML_ATTRIBUTES,
+  ALLOWED_HTML_STYLES,
+  EMAIL_HTML_TEMPLATE,
+} from "@/lib/constants";
+import sanitizeHtml from "sanitize-html";
 import { ParsedMessage } from "@/types";
 import { google } from "googleapis";
 import * as he from "he";
@@ -15,6 +22,27 @@ interface IConfig {
     access_token: string;
     refresh_token: string;
   };
+}
+
+function fromBinary(str: string) {
+  return decodeURIComponent(
+    atob(str.replace(/-/g, "+").replace(/_/g, "/"))
+      .split("")
+      .map(function (c) {
+        return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+      })
+      .join(""),
+  );
+}
+
+function createEmailHtml(decodedBody: string): string {
+  const sanitizedHtml = sanitizeHtml(decodedBody, {
+    allowedTags: ALLOWED_HTML_TAGS,
+    allowedAttributes: ALLOWED_HTML_ATTRIBUTES,
+    allowedStyles: ALLOWED_HTML_STYLES,
+  });
+
+  return EMAIL_HTML_TEMPLATE.replace("{{content}}", sanitizedHtml);
 }
 
 const googleDriver = (config: IConfig): MailManager => {
@@ -108,10 +136,10 @@ const SupportedProviders = {
 };
 
 export const createDriver = (
-  provider: keyof typeof SupportedProviders,
+  provider: keyof typeof SupportedProviders | string,
   config: IConfig,
 ): MailManager => {
-  const factory = SupportedProviders[provider];
+  const factory = SupportedProviders[provider as keyof typeof SupportedProviders];
   if (!factory) throw new Error("Provider not supported");
   switch (provider) {
     case "google":
