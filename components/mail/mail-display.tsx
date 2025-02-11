@@ -8,26 +8,22 @@ import {
   ReplyAll,
   BellOff,
   X,
-  Lock,
   Send,
   FileIcon,
   Copy,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
-import { format } from "date-fns/format";
 import sanitizeHtml from "sanitize-html";
 import { cn } from "@/lib/utils";
 import React from "react";
 
 import { DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { DropdownMenu, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Mail } from "@/components/mail/data";
 import { useMail } from "./use-mail";
 import { Badge } from "../ui/badge";
 import Image from "next/image";
