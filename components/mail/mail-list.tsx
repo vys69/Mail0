@@ -17,8 +17,9 @@ const HOVER_DELAY = 300; // ms before prefetching
 const Thread = ({ message }: { message: InitialThread }) => {
   const [mail, setMail] = useMail();
   const { data: session } = useSession();
-  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const isHovering = useRef<boolean>(false);
+  const hasPrefetched = useRef<boolean>(false);
 
   const isMailSelected = useMemo(() => message.id === mail.selected, [message.id, mail.selected]);
 
@@ -37,7 +38,7 @@ const Thread = ({ message }: { message: InitialThread }) => {
 
   const handleMouseEnter = () => {
     isHovering.current = true;
-    if (session?.user.id) {
+    if (session?.user.id && !hasPrefetched.current) {
       // Clear any existing timeout
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current);
@@ -46,9 +47,10 @@ const Thread = ({ message }: { message: InitialThread }) => {
       // Set new timeout for prefetch
       hoverTimeoutRef.current = setTimeout(() => {
         if (isHovering.current) {
-          // Only prefetch if still hovering
+          // Only prefetch if still hovering and hasn't been prefetched
           console.log(`🕒 Hover threshold reached for email ${message.id}, initiating prefetch...`);
           preloadThread(session.user.id, message.id);
+          hasPrefetched.current = true;
         }
       }, HOVER_DELAY);
     }
@@ -60,6 +62,11 @@ const Thread = ({ message }: { message: InitialThread }) => {
       clearTimeout(hoverTimeoutRef.current);
     }
   };
+
+  // Reset prefetch flag when message changes
+  useEffect(() => {
+    hasPrefetched.current = false;
+  }, [message.id]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
