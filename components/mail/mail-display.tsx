@@ -13,6 +13,8 @@ import {
   Copy,
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useThread } from "@/hooks/use-threads";
+import { ParsedMessage } from "@/types";
 import { cn } from "@/lib/utils";
 import React from "react";
 
@@ -26,20 +28,6 @@ import { Button } from "@/components/ui/button";
 import { useMail } from "./use-mail";
 import { Badge } from "../ui/badge";
 import Image from "next/image";
-
-interface MailResponse {
-  id: string;
-  title: string;
-  tags: string[];
-  sender: {
-    name: string;
-    email: string;
-  };
-  unread: boolean;
-  receivedOn: string;
-  body: string;
-  processedHtml: string;
-}
 
 interface MailDisplayProps {
   mail: string | null;
@@ -80,53 +68,12 @@ const ALLOWED_TAGS = [
 
 export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
   const [, setMail] = useMail();
-  const [emailData, setEmailData] = useState<MailResponse | null>(null);
+  const { data: emailData, isLoading } = useThread(mail || "");
   const [isMuted, setIsMuted] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const blobUrlRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    async function fetchEmail() {
-      if (!mail) return;
-
-      try {
-        setIsLoading(true);
-        const cacheKey = `email-${mail}`;
-        const cachedData = sessionStorage.getItem(cacheKey);
-
-        if (cachedData) {
-          const parsed = JSON.parse(cachedData);
-          setEmailData(parsed);
-          return;
-        }
-
-        const response = await fetch(`/api/v1/mail/${mail}`, {
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch email: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        sessionStorage.setItem(cacheKey, JSON.stringify(data));
-        setEmailData(data);
-      } catch (error) {
-        console.error("Error fetching email:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchEmail();
-  }, [mail]);
 
   // Create blob URL when email data changes
   useEffect(() => {
@@ -202,12 +149,14 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
     }
   };
 
-  if (!emailData) {
+  if (!emailData || !mail) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="h-32 w-32 animate-pulse rounded-full bg-secondary" />
-          <p className="text-sm text-muted-foreground">Loading email...</p>
+          <p className="text-sm text-muted-foreground">
+            {isLoading ? "Loading email..." : "Select an email to view"}
+          </p>
         </div>
       </div>
     );

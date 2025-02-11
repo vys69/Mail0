@@ -39,6 +39,8 @@ export interface ParsedMessage {
   };
   receivedOn: string;
   unread: boolean;
+  body: string;
+  processedHtml: string;
 }
 
 export interface InitialThread {

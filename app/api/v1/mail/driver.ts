@@ -1,3 +1,9 @@
+import {
+  ALLOWED_HTML_TAGS,
+  ALLOWED_HTML_ATTRIBUTES,
+  ALLOWED_HTML_STYLES,
+  EMAIL_HTML_TEMPLATE,
+} from "@/lib/constants";
 import sanitizeHtml from "sanitize-html";
 import { ParsedMessage } from "@/types";
 import { google } from "googleapis";
@@ -30,100 +36,12 @@ function fromBinary(str: string) {
 
 function createEmailHtml(decodedBody: string): string {
   const sanitizedHtml = sanitizeHtml(decodedBody, {
-    allowedTags: [
-      "p",
-      "br",
-      "b",
-      "i",
-      "em",
-      "strong",
-      "a",
-      "img",
-      "ul",
-      "ol",
-      "li",
-      "h1",
-      "h2",
-      "h3",
-      "h4",
-      "h5",
-      "h6",
-      "blockquote",
-      "pre",
-      "code",
-      "div",
-      "span",
-      "table",
-      "thead",
-      "tbody",
-      "tr",
-      "td",
-      "th",
-    ],
-    allowedAttributes: {
-      a: ["href", "target", "rel"],
-      img: ["src", "alt", "width", "height"],
-      "*": ["style", "class"],
-    },
-    allowedStyles: {
-      "*": {
-        color: [/^#(0x)?[0-9a-f]+$/i, /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/],
-        "background-color": [
-          /^#(0x)?[0-9a-f]+$/i,
-          /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/,
-        ],
-        "text-align": [/^left$/, /^right$/, /^center$/],
-        "font-size": [/^\d+(?:px|em|%)$/],
-      },
-    },
+    allowedTags: ALLOWED_HTML_TAGS,
+    allowedAttributes: ALLOWED_HTML_ATTRIBUTES,
+    allowedStyles: ALLOWED_HTML_STYLES,
   });
 
-  return `<!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-          body {
-            margin: 0;
-            padding: 16px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            line-height: 1.5;
-            color: var(--foreground);
-            background: var(--background);
-          }
-          img { max-width: 100%; height: auto; }
-          pre, code { 
-            background: var(--secondary);
-            padding: 0.2em 0.4em;
-            border-radius: 3px;
-            font-size: 0.9em;
-          }
-          pre code {
-            background: none;
-            padding: 0;
-          }
-          blockquote {
-            margin: 0;
-            padding-left: 1em;
-            border-left: 3px solid var(--border);
-            color: var(--muted-foreground);
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          th, td {
-            padding: 8px;
-            border: 1px solid var(--border);
-          }
-          a { color: var(--primary); }
-        </style>
-      </head>
-      <body>
-        ${sanitizedHtml}
-      </body>
-    </html>`;
+  return EMAIL_HTML_TEMPLATE.replace("{{content}}", sanitizedHtml);
 }
 
 const googleDriver = (config: IConfig): MailManager => {
@@ -160,6 +78,8 @@ const googleDriver = (config: IConfig): MailManager => {
       },
       unread: labelIds.includes("UNREAD"),
       receivedOn,
+      body: "",
+      processedHtml: "",
     };
   };
 
