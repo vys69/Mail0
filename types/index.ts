@@ -41,6 +41,7 @@ export interface ParsedMessage {
   unread: boolean;
   body: string;
   processedHtml: string;
+  blobUrl: string;
 }
 
 export interface InitialThread {

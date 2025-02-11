@@ -62,9 +62,10 @@ const googleDriver = (config: IConfig): MailManager => {
     labelIds: string[];
     payload: {
       headers: { name: string; value: string }[];
+      body?: { data?: string };
+      parts?: any[];
     };
-    body: string;
-  }): ParsedMessage => {
+  }): Omit<ParsedMessage, "body" | "processedHtml" | "blobUrl"> => {
     const receivedOn = payload.headers.find((h) => h.name === "Date")?.value || "Failed";
     const sender = payload.headers.find((h) => h.name === "From")?.value || "Failed";
     const [name, email] = sender.split("<");
@@ -78,8 +79,6 @@ const googleDriver = (config: IConfig): MailManager => {
       },
       unread: labelIds.includes("UNREAD"),
       receivedOn,
-      body: "",
-      processedHtml: "",
     };
   };
 
@@ -115,7 +114,13 @@ const googleDriver = (config: IConfig): MailManager => {
               format: "metadata",
               metadataHeaders: ["From", "Subject", "Date"],
             });
-            return parse(msg.data as any);
+            const parsed = parse(msg.data as any);
+            return {
+              ...parsed,
+              body: "",
+              processedHtml: "",
+              blobUrl: "",
+            };
           })
           .filter((msg): msg is NonNullable<typeof msg> => msg !== null),
       );
@@ -178,6 +183,7 @@ const googleDriver = (config: IConfig): MailManager => {
         ...parsedData,
         body: bodyData,
         processedHtml,
+        blobUrl: `data:text/html;charset=utf-8,${encodeURIComponent(processedHtml)}`,
       };
     },
 
