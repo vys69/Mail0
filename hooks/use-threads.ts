@@ -34,58 +34,43 @@ const fetchEmail = async (args: any[]) => {
     const cachedData = sessionStorage.getItem(cacheKey);
 
     if (cachedData) {
-      console.log(`📦 Using cached data for email ${id}`);
-      return JSON.parse(cachedData) as ParsedMessage;
-    }
-
-    console.log(`🚀 Starting fetch for email ${id}...`);
-    const response = await fetch(`${BASE_URL}/api/v1/mail/${id}`);
-    const reader = response.body?.getReader();
-    const contentLength = response.headers.get("Content-Length");
-
-    if (!reader) {
-      return $fetch(`/api/v1/mail/${id}`, {
-        baseURL: BASE_URL,
-      }).then((e) => {
-        const data = e.data as ParsedMessage;
-        sessionStorage.setItem(cacheKey, JSON.stringify(data));
-        console.log(`✅ Completed fetch for email ${id}`);
-        return data;
-      });
-    }
-
-    let receivedLength = 0;
-    const chunks: Uint8Array[] = [];
-
-    while (true) {
-      const { done, value } = await reader.read();
-
-      if (done) break;
-
-      chunks.push(value);
-      receivedLength += value.length;
-
-      if (contentLength) {
-        const progress = ((receivedLength / parseInt(contentLength)) * 100).toFixed(2);
-        console.log(`⏳ Email ${id}: ${progress}% downloaded...`);
+      const parsed = JSON.parse(cachedData);
+      // Only use cache if it has processedHtml
+      if (parsed.processedHtml) {
+        console.log(`📦 Using cached data for email ${id}`);
+        return parsed;
+      } else {
+        console.log(`🔄 Cache miss (no HTML) for email ${id}, fetching fresh data...`);
       }
     }
 
-    // Concatenate chunks into a single Uint8Array
-    const allChunks = new Uint8Array(receivedLength);
-    let position = 0;
-    for (const chunk of chunks) {
-      allChunks.set(chunk, position);
-      position += chunk.length;
+    console.log(`🚀 Starting fetch for email ${id}...`);
+    const response = await fetch(`${BASE_URL}/api/v1/mail/${id}`, {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch email: ${response.statusText}`);
     }
 
-    // Convert to text and parse JSON
-    const text = new TextDecoder("utf-8").decode(allChunks);
-    const data = JSON.parse(text) as ParsedMessage;
+    const data = await response.json();
 
-    // Cache the result
+    if (!data.processedHtml) {
+      console.error(`❌ No processed HTML in response for email ${id}`);
+      throw new Error("No processed HTML in response");
+    }
+
+    console.log(`✅ Successfully fetched email ${id}`, {
+      hasProcessedHtml: true,
+      contentLength: data.processedHtml.length,
+    });
+
+    // Cache the complete data
     sessionStorage.setItem(cacheKey, JSON.stringify(data));
-    console.log(`✅ Completed fetch for email ${id}`);
     return data;
   } catch (error) {
     console.error(`❌ Error fetching email ${id}:`, error);
