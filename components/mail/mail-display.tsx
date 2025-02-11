@@ -12,8 +12,7 @@ import {
   FileIcon,
   Copy,
 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
-import sanitizeHtml from "sanitize-html";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import React from "react";
 
@@ -38,7 +37,8 @@ interface MailResponse {
   };
   unread: boolean;
   receivedOn: string;
-  body: string; // base64 encoded HTML
+  body: string;
+  processedHtml: string;
 }
 
 interface MailDisplayProps {
@@ -78,149 +78,77 @@ const ALLOWED_TAGS = [
   "th",
 ];
 
-function fromBinary(str: string) {
-  return decodeURIComponent(
-    atob(str.replace(/-/g, "+").replace(/_/g, "/"))
-      .split("")
-      .map(function (c) {
-        return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-      })
-      .join(""),
-  );
-}
-
 export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
   const [, setMail] = useMail();
   const [emailData, setEmailData] = useState<MailResponse | null>(null);
-  const [decodedBody, setDecodedBody] = useState<string>("");
   const [isMuted, setIsMuted] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-
-  // Cache for processed HTML blobs
-  useEffect(() => {
-    const blobCache = new Map<string, string>();
-
-    return () => {
-      // Cleanup blobs on unmount
-      blobCache.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, []);
+  const [isLoading, setIsLoading] = useState(false);
+  const blobUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     async function fetchEmail() {
       if (!mail) return;
 
       try {
+        setIsLoading(true);
         const cacheKey = `email-${mail}`;
         const cachedData = sessionStorage.getItem(cacheKey);
 
         if (cachedData) {
-          console.log(`📦 Using cached email data for ${mail}`);
-          setEmailData(JSON.parse(cachedData));
+          const parsed = JSON.parse(cachedData);
+          setEmailData(parsed);
           return;
         }
 
-        const response = await fetch(`/api/v1/mail/${mail}`);
-        if (!response.ok) throw new Error("Failed to fetch email");
+        const response = await fetch(`/api/v1/mail/${mail}`, {
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch email: ${response.statusText}`);
+        }
 
         const data = await response.json();
         sessionStorage.setItem(cacheKey, JSON.stringify(data));
         setEmailData(data);
       } catch (error) {
         console.error("Error fetching email:", error);
+      } finally {
+        setIsLoading(false);
       }
     }
 
     fetchEmail();
   }, [mail]);
 
+  // Create blob URL when email data changes
+  useEffect(() => {
+    if (!emailData?.processedHtml) return;
+
+    const blob = new Blob([emailData.processedHtml], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    blobUrlRef.current = url;
+
+    return () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+    };
+  }, [emailData?.processedHtml]);
+
   useEffect(() => {
     if (emailData) {
       setIsMuted(emailData.unread ?? false);
     }
   }, [emailData]);
-
-  useEffect(() => {
-    if (!emailData?.body) return;
-
-    try {
-      // Check if we have a cached blob URL for this email
-      const blobCacheKey = `blob-${emailData.id}`;
-      const cachedBlobUrl = sessionStorage.getItem(blobCacheKey);
-
-      if (cachedBlobUrl) {
-        console.log(`📦 Using cached HTML blob for email ${emailData.id}`);
-        setBlobUrl(cachedBlobUrl);
-        return;
-      }
-
-      console.log(`🔄 Processing HTML for email ${emailData.id}...`);
-      const decoded = fromBinary(emailData.body);
-      const sanitized = sanitizeHtml(decoded, {
-        allowedTags: ALLOWED_TAGS,
-        allowedAttributes: {
-          "*": ["class", "id", "style"],
-          img: ["src", "alt", "title", "width", "height"],
-          a: ["href", "target", "rel"],
-          td: ["colspan", "rowspan"],
-          th: ["colspan", "rowspan", "scope"],
-        },
-      });
-
-      // Create a complete HTML document
-      const htmlDocument = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <style>
-              body {
-                margin: 0;
-                padding: 0;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-                width: 100%;
-                height: 100%;
-                overflow-y: auto;
-              }
-              table {
-                width: 100%;
-              }
-              img {
-                max-width: 100%;
-                height: auto;
-              }
-            </style>
-          </head>
-          <body>
-            ${sanitized}
-          </body>
-        </html>
-      `;
-
-      // Create a blob URL for the content
-      const blob = new Blob([htmlDocument], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-
-      // Cache the blob URL
-      sessionStorage.setItem(blobCacheKey, url);
-      console.log(`✨ Cached HTML blob for email ${emailData.id}`);
-
-      setBlobUrl(url);
-
-      return () => {
-        if (url) {
-          URL.revokeObjectURL(url);
-          sessionStorage.removeItem(blobCacheKey);
-        }
-      };
-    } catch (error) {
-      console.error("Error processing email:", error);
-    }
-  }, [emailData?.body, emailData?.id]);
 
   const handleClose = useCallback(() => {
     onClose?.();
@@ -274,9 +202,16 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
     }
   };
 
-  if (!emailData) return <div>Loading...</div>;
-
-  if (!blobUrl) return null;
+  if (!emailData) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-32 w-32 animate-pulse rounded-full bg-secondary" />
+          <p className="text-sm text-muted-foreground">Loading email...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -388,11 +323,14 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
 
             <div className="h-full w-full p-0">
               <div className="flex h-full w-full flex-1 flex-col p-0">
-                {blobUrl ? (
+                {blobUrlRef.current ? (
                   <iframe
                     key={emailData.id}
-                    src={blobUrl}
-                    className="w-full flex-1 border-none opacity-100 transition-opacity duration-200"
+                    src={blobUrlRef.current}
+                    className={cn(
+                      "w-full flex-1 border-none transition-opacity duration-200",
+                      isLoading ? "opacity-50" : "opacity-100",
+                    )}
                     title="Email Content"
                     sandbox="allow-same-origin"
                     style={{
