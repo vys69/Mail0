@@ -47,6 +47,37 @@ interface MailDisplayProps {
   isMobile?: boolean;
 }
 
+const ALLOWED_TAGS = [
+  "p",
+  "br",
+  "b",
+  "i",
+  "em",
+  "strong",
+  "a",
+  "img",
+  "ul",
+  "ol",
+  "li",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "blockquote",
+  "pre",
+  "code",
+  "div",
+  "span",
+  "table",
+  "thead",
+  "tbody",
+  "tr",
+  "td",
+  "th",
+];
+
 function fromBinary(str: string) {
   return decodeURIComponent(
     atob(str.replace(/-/g, "+").replace(/_/g, "/"))
@@ -66,6 +97,7 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchEmail() {
@@ -93,69 +125,64 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
   }, [emailData]);
 
   useEffect(() => {
-    if (emailData?.body) {
-      // Use the new fromBinary function to properly decode the body
-      const ALLOWED_TAGS = [
-        // Common email tags
-        "div",
-        "p",
-        "span",
-        "a",
-        "img",
-        "table",
-        "tr",
-        "td",
-        "th",
-        "h1",
-        "h2",
-        "h3",
-        "h4",
-        "h5",
-        "h6",
-        "ul",
-        "ol",
-        "li",
-        "br",
-        "b",
-        "strong",
-        "i",
-        "em",
-        "style",
-      ];
+    if (!emailData?.body) return;
 
-      try {
-        const decoded = fromBinary(emailData.body);
-        const sanitized = sanitizeHtml(decoded, {
-          allowedTags: ALLOWED_TAGS,
-          allowedAttributes: {
-            "*": ["class", "id", "style"], // Allow style on everything
-            img: ["src", "alt", "title", "width", "height"],
-            a: ["href", "target", "rel"],
-          },
-          allowedStyles: {
-            "*": {
-              // Allow all styles on all elements
-              "*": [/.*/], // Regex that matches everything
-            },
-          },
-          allowedSchemes: ["http", "https", "mailto", "tel"], // Only allow safe URL schemes
-          transformTags: {
-            a: (tagName, attribs) => ({
-              tagName,
-              attribs: {
-                ...attribs,
-                target: "_blank",
-                rel: "noopener noreferrer",
-              },
-            }),
-          },
-        });
-        setDecodedBody(sanitized);
-      } catch (error) {
-        console.error("Error decoding email body:", error);
-      }
+    try {
+      const decoded = fromBinary(emailData.body);
+      const sanitized = sanitizeHtml(decoded, {
+        allowedTags: ALLOWED_TAGS,
+        allowedAttributes: {
+          "*": ["class", "id", "style"],
+          img: ["src", "alt", "title", "width", "height"],
+          a: ["href", "target", "rel"],
+          td: ["colspan", "rowspan"],
+          th: ["colspan", "rowspan", "scope"],
+        },
+      });
+
+      // Create a complete HTML document
+      const htmlDocument = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>
+              body {
+                margin: 0;
+                padding: 0;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+                width: 100%;
+                height: 100%;
+                overflow-y: auto;
+              }
+              table {
+                width: 100%;
+              }
+              img {
+                max-width: 100%;
+                height: auto;
+              }
+            </style>
+          </head>
+          <body>
+            ${sanitized}
+          </body>
+        </html>
+      `;
+
+      // Create a blob URL for the content
+      const blob = new Blob([htmlDocument], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      setBlobUrl(url);
+
+      return () => {
+        if (url) URL.revokeObjectURL(url);
+      };
+    } catch (error) {
+      console.error("Error processing email:", error);
     }
-  }, [emailData]);
+  }, [emailData?.body]);
 
   const handleClose = useCallback(() => {
     onClose?.();
@@ -210,6 +237,8 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
   };
 
   if (!emailData) return <div>Loading...</div>;
+
+  if (!blobUrl) return null;
 
   return (
     <div className="flex h-full flex-col">
@@ -295,7 +324,7 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
         </div>
 
         <div className="relative flex-1 overflow-hidden">
-          <div className="absolute inset-0 overflow-y-auto">
+          <div className="absolute inset-0 overflow-y-auto pb-[calc(120px+2rem)]">
             <div className="flex flex-col gap-4 px-4 py-4">
               <div className="flex items-start gap-3">
                 <Avatar>
@@ -319,11 +348,20 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
 
             <Separator />
 
-            <div className="px-8 py-4 pb-[200px]">
-              <div
-                className="prose prose-sm dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: decodedBody }}
-              />
+            <div className="h-full w-full p-0">
+              <div className="flex h-full w-full flex-1 flex-col p-0">
+                <iframe
+                  src={blobUrl}
+                  className="w-full flex-1 border-none"
+                  title="Email Content"
+                  sandbox="allow-same-origin allow-scripts"
+                  style={{
+                    minHeight: "100%",
+                    height: "100%",
+                    overflow: "auto",
+                  }}
+                />
+              </div>
             </div>
           </div>
 
@@ -339,7 +377,7 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
               </div>
 
               <Textarea
-                className="min-h-[120px] w-full resize-none border-0 bg-[#18181A] leading-relaxed placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0 md:text-base"
+                className="min-h-[60px] w-full resize-none border-0 bg-[#18181A] leading-relaxed placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0 md:text-base"
                 placeholder="Write your reply..."
                 spellCheck={true}
                 autoFocus
