@@ -21,8 +21,11 @@ const fetchEmails = async (args: any[]) => {
 
 const fetchEmail = async (args: any[]): Promise<ParsedMessage> => {
   const [_, id] = args;
-  return await $fetch(`/api/v1/mail/${id}`, {
+  return await $fetch(`/api/v1/${id}/`, {
     baseURL: BASE_URL,
+    onSuccess(context) {
+      console.log(context.data);
+    },
   }).then((e) => e.data as ParsedMessage);
 };
 

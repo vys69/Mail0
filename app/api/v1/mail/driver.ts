@@ -7,6 +7,7 @@ interface MailManager {
   create(data: any): Promise<any>;
   delete(id: string): Promise<any>;
   list(folder: string, query?: string, maxResults?: number, labelIds?: string[]): Promise<any>;
+  count(): Promise<any>;
 }
 
 interface IConfig {
@@ -59,6 +60,22 @@ const googleDriver = (config: IConfig): MailManager => {
   };
   const gmail = google.gmail({ version: "v1", auth });
   return {
+    count: async () => {
+      const folders = ["inbox", "spam"];
+      return await Promise.all(
+        folders.map(async (folder) => {
+          const { folder: normalizedFolder, q: normalizedQ } = normalizeSearch(folder, "");
+          const labelIds = [];
+          if (normalizedFolder) labelIds.push(normalizedFolder.toUpperCase());
+          const res = await gmail.users.messages.list({
+            userId: "me",
+            q: normalizedQ ? normalizedQ : undefined,
+            labelIds,
+          });
+          return res.data.resultSizeEstimate;
+        }),
+      );
+    },
     list: async (folder, q, maxResults = 10, _labelIds: string[] = []) => {
       const { folder: normalizedFolder, q: normalizedQ } = normalizeSearch(folder, q ?? "");
       const labelIds = [..._labelIds];
