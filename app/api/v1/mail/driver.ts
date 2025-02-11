@@ -1,3 +1,4 @@
+import sanitizeHtml from "sanitize-html";
 import { ParsedMessage } from "@/types";
 import { google } from "googleapis";
 import * as he from "he";
@@ -16,12 +17,122 @@ interface IConfig {
   };
 }
 
+function fromBinary(str: string) {
+  return decodeURIComponent(
+    atob(str.replace(/-/g, "+").replace(/_/g, "/"))
+      .split("")
+      .map(function (c) {
+        return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+      })
+      .join(""),
+  );
+}
+
+function createEmailHtml(decodedBody: string): string {
+  const sanitizedHtml = sanitizeHtml(decodedBody, {
+    allowedTags: [
+      "p",
+      "br",
+      "b",
+      "i",
+      "em",
+      "strong",
+      "a",
+      "img",
+      "ul",
+      "ol",
+      "li",
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "h5",
+      "h6",
+      "blockquote",
+      "pre",
+      "code",
+      "div",
+      "span",
+      "table",
+      "thead",
+      "tbody",
+      "tr",
+      "td",
+      "th",
+    ],
+    allowedAttributes: {
+      a: ["href", "target", "rel"],
+      img: ["src", "alt", "width", "height"],
+      "*": ["style", "class"],
+    },
+    allowedStyles: {
+      "*": {
+        color: [/^#(0x)?[0-9a-f]+$/i, /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/],
+        "background-color": [
+          /^#(0x)?[0-9a-f]+$/i,
+          /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/,
+        ],
+        "text-align": [/^left$/, /^right$/, /^center$/],
+        "font-size": [/^\d+(?:px|em|%)$/],
+      },
+    },
+  });
+
+  return `<!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body {
+            margin: 0;
+            padding: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.5;
+            color: var(--foreground);
+            background: var(--background);
+          }
+          img { max-width: 100%; height: auto; }
+          pre, code { 
+            background: var(--secondary);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-size: 0.9em;
+          }
+          pre code {
+            background: none;
+            padding: 0;
+          }
+          blockquote {
+            margin: 0;
+            padding-left: 1em;
+            border-left: 3px solid var(--border);
+            color: var(--muted-foreground);
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          th, td {
+            padding: 8px;
+            border: 1px solid var(--border);
+          }
+          a { color: var(--primary); }
+        </style>
+      </head>
+      <body>
+        ${sanitizedHtml}
+      </body>
+    </html>`;
+}
+
 const googleDriver = (config: IConfig): MailManager => {
   const auth = new google.auth.OAuth2({
     clientId: process.env.GOOGLE_CLIENT_ID as string,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
   });
   auth.setCredentials({ ...config.auth, scope: "https://mail.google.com/" });
+
   const parse = ({
     id,
     snippet,
@@ -51,13 +162,16 @@ const googleDriver = (config: IConfig): MailManager => {
       receivedOn,
     };
   };
+
   const normalizeSearch = (folder: string, q: string) => {
     if (folder === "trash") {
       return { folder: undefined, q: `in:trash ${q}` };
     }
     return { folder, q };
   };
+
   const gmail = google.gmail({ version: "v1", auth });
+
   return {
     list: async (folder, q, maxResults = 10, _labelIds: string[] = []) => {
       const { folder: normalizedFolder, q: normalizedQ } = normalizeSearch(folder, q ?? "");
@@ -88,17 +202,21 @@ const googleDriver = (config: IConfig): MailManager => {
 
       return { ...res.data, messages };
     },
+
     get: async (id: string) => {
+      console.log(`📨 Driver: Starting Gmail API request for email ${id}...`);
       const res = await gmail.users.messages.get({
         userId: "me",
         id,
         format: "full",
       });
+      console.log(`✓ Driver: Received raw response from Gmail API for ${id}`);
 
       // Helper to find HTML content in message parts
       const findHtmlBody = (parts: any[]): string => {
         for (const part of parts) {
           if (part.mimeType === "text/html" && part.body?.data) {
+            console.log("✓ Driver: Found HTML content in message part");
             return part.body.data;
           }
           if (part.parts) {
@@ -106,6 +224,7 @@ const googleDriver = (config: IConfig): MailManager => {
             if (found) return found;
           }
         }
+        console.log("⚠️ Driver: No HTML content found in message parts");
         return "";
       };
 
@@ -116,15 +235,37 @@ const googleDriver = (config: IConfig): MailManager => {
         res.data.payload?.parts?.[0]?.body?.data ||
         ""; // Fallback to first part
 
+      if (!bodyData) {
+        console.log("⚠️ Driver: No email body data found");
+      } else {
+        console.log("✓ Driver: Found email body data");
+      }
+
+      // Process the body content
+      console.log("🔄 Driver: Processing email body...");
+      const decodedBody = fromBinary(bodyData);
+      const processedHtml = createEmailHtml(decodedBody);
+
+      console.log("✅ Driver: Email processing complete", {
+        hasBody: !!bodyData,
+        hasProcessedHtml: !!processedHtml,
+        processedHtmlLength: processedHtml.length,
+        decodedBodyLength: decodedBody.length,
+      });
+
+      const parsedData = parse(res.data as any);
       return {
-        ...parse(res.data as any),
+        ...parsedData,
         body: bodyData,
+        processedHtml,
       };
     },
+
     create: async (data: any) => {
       const res = await gmail.users.messages.send({ userId: "me", requestBody: data });
       return res.data;
     },
+
     delete: async (id: string) => {
       const res = await gmail.users.messages.delete({ userId: "me", id });
       return res.data;
