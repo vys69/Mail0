@@ -11,8 +11,58 @@ export const preloadThread = (userId: string, threadId: string) => {
 };
 
 const threadsCache = {
-  set: async (data: ParsedMessage & { q: string }) => {
-    await idb.threads.put(data);
+  add: async (data: ParsedMessage & { q: string }) => {
+    try {
+      await idb.threads.add(data, data.id);
+    } catch (err) {
+      console.error("Failed to cache email:", err);
+    }
+  },
+  bulkAdd: async (data: ParsedMessage[]) => {
+    try {
+      await idb.threads.bulkAdd(data);
+    } catch (err) {
+      console.error("Failed to cache emails:", err);
+    }
+  },
+  update: async (data: Partial<ParsedMessage> & { id: string }) => {
+    try {
+      await idb.threads.update(data.id, { ...data });
+    } catch (err) {
+      console.error("Failed to cache email:", err);
+    }
+  },
+  put: async (data: ParsedMessage) => {
+    try {
+      await idb.threads.put(data);
+    } catch (err) {
+      console.error("Failed to cache email:", err);
+    }
+  },
+  bulkPut: async (data: ParsedMessage[], q: string) => {
+    try {
+      const keysToUpdate = await Promise.all(
+        data.map((item) => idb.threads.get(item.id).then((e) => e?.id)),
+      );
+      await idb.threads.bulkUpdate(
+        data
+          .filter((e) => !!e.blobUrl)
+          .map((item) => ({
+            key: item.id,
+            changes: {
+              blobUrl: item.blobUrl,
+              processedHtml: item.processedHtml,
+              body: item.body,
+            },
+          })),
+      );
+      const keysToAdd = data
+        .filter((item) => !keysToUpdate.includes(item.id))
+        .map((e) => ({ ...e, q }));
+      await idb.threads.bulkPut(keysToAdd);
+    } catch (err) {
+      console.error("Failed to cache emails:", err);
+    }
   },
   get: async (id: string) => {
     const data = await idb.threads.get(id);
@@ -37,11 +87,8 @@ const fetchEmails = async (args: any[]) => {
   return (await $fetch("/api/v1/mail?" + searchParams.toString(), {
     baseURL: BASE_URL,
     onSuccess(context) {
-      Promise.all(
-        context.data.messages.reverse().map((message: ParsedMessage) => {
-          return threadsCache.set({ ...message, q: searchParams.toString() });
-        }),
-      );
+      // reversing the order of the messages to make sure the newest ones are at the top
+      threadsCache.bulkPut(context.data.messages.reverse(), searchParams.toString());
     },
   }).then((e) => e.data)) as RawResponse;
 };
@@ -64,7 +111,12 @@ const fetchEmail = async (args: any[]): Promise<ParsedMessage> => {
   return await $fetch(`/api/v1/${id}/`, {
     baseURL: BASE_URL,
     onSuccess(context) {
-      threadsCache.set(context.data);
+      threadsCache.update({
+        id,
+        blobUrl: context.data.blobUrl,
+        processedHtml: context.data.processedHtml,
+        body: context.data.body,
+      });
     },
   }).then((e) => e.data as ParsedMessage);
 };

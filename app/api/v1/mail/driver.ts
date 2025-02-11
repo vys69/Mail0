@@ -87,7 +87,7 @@ const googleDriver = (config: IConfig): MailManager => {
     const [name, email] = sender.split("<");
     return {
       id,
-      title: he.decode(snippet),
+      title: he.decode(snippet).trim(),
       tags: labelIds,
       sender: {
         name: name.replace(/"/g, "").trim(),
@@ -107,6 +107,7 @@ const googleDriver = (config: IConfig): MailManager => {
   return {
     count: async () => {
       const folders = ["inbox", "spam"];
+      // this sometimes fails due to wrong crednetials
       return await Promise.all(
         folders.map(async (folder) => {
           const { folder: normalizedFolder, q: normalizedQ } = normalizeSearch(folder, "");
