@@ -68,7 +68,7 @@ export function Mail({ folder }: MailProps) {
     }
     return undefined;
   }, [filterValue, searchParams]);
-  const { data: threadsResponse, isLoading } = useThreads(folder, labels, searchValue.value);
+  const { data: threadsResponse, isLoading } = useThreads(folder, labels, searchValue.value, 100);
   const [open, setOpen] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
