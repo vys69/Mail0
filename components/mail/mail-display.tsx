@@ -11,8 +11,8 @@ import {
   Lock,
   Send,
   FileIcon,
+  Copy,
 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns/format";
 import { cn } from "@/lib/utils";
 import React from "react";
@@ -22,9 +22,11 @@ import { DropdownMenu, DropdownMenuTrigger } from "@/components/ui/dropdown-menu
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { useThread } from "@/hooks/use-threads";
 import { Mail } from "@/components/mail/data";
 import { useMail } from "./use-mail";
 import { Badge } from "../ui/badge";
@@ -38,26 +40,34 @@ interface MailDisplayProps {
 
 export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
   const [, setMail] = useMail();
-  const [currentMail] = useState<Mail | null>();
   const [isMuted, setIsMuted] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const { data: emailData, isLoading } = useThread(mail || "");
+  const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
-    // find email and parse body and set it
-    // setCurrentMail(mail);
-  }, [mail]);
-
-  useEffect(() => {
-    if (currentMail) {
-      setIsMuted(currentMail.muted ?? false);
+    if (emailData) {
+      setIsMuted(emailData.unread ?? false);
     }
-  }, [currentMail]);
+  }, [emailData]);
 
   const handleClose = useCallback(() => {
     onClose?.();
     setMail({ selected: null });
   }, [onClose, setMail]);
+
+  const handleCopy = async () => {
+    if (emailData) {
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(emailData, null, 2));
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000); // Reset after 2 seconds
+      } catch (err) {
+        console.error("Failed to copy:", err);
+      }
+    }
+  };
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
@@ -94,7 +104,18 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
     return `${name.slice(0, maxLength)}...`;
   };
 
-  if (!currentMail) return null;
+  if (!emailData || !mail) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-32 w-32 animate-pulse rounded-full bg-secondary" />
+          <p className="text-sm text-muted-foreground">
+            {isLoading ? "Loading email..." : "Select an email to view"}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -107,7 +128,7 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
                   <Button
                     variant="ghost"
                     className="md:h-fit md:px-2"
-                    disabled={!currentMail}
+                    disabled={!emailData}
                     onClick={handleClose}
                   >
                     <X className="h-4 w-4" />
@@ -117,14 +138,28 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
                 <TooltipContent>Close</TooltipContent>
               </Tooltip>
             )}
-            <div className="flex-1 truncate text-sm font-medium">
-              {currentMail?.subject || "No message selected"}
+            <div className="max-w-[300px] flex-1 truncate text-sm font-medium">
+              {emailData.title || "No subject"}
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!currentMail}>
+                <Button
+                  variant="ghost"
+                  className="md:h-fit md:px-2"
+                  disabled={!emailData}
+                  onClick={handleCopy}
+                >
+                  <Copy className="h-4 w-4" />
+                  <span className="sr-only">Copy email data</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{copySuccess ? "Copied!" : "Copy email data"}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!emailData}>
                   <Archive className="h-4 w-4" />
                   <span className="sr-only">Archive</span>
                 </Button>
@@ -133,7 +168,7 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!currentMail}>
+                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!emailData}>
                   <Reply className="h-4 w-4" />
                   <span className="sr-only">Reply</span>
                 </Button>
@@ -142,7 +177,7 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
             </Tooltip>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!currentMail}>
+                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!emailData}>
                   <MoreVertical className="h-4 w-4" />
                   <span className="sr-only">More</span>
                 </Button>
@@ -166,69 +201,23 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
         </div>
 
         <div className="relative flex-1 overflow-hidden">
-          <div className="absolute inset-0 overflow-y-auto">
+          <div className="absolute inset-0 overflow-y-auto pb-[calc(120px+2rem)]">
             <div className="flex flex-col gap-4 px-4 py-4">
               <div className="flex items-start gap-3">
                 <Avatar>
-                  <AvatarImage alt={currentMail.name} />
+                  <AvatarImage alt={emailData.sender.name} />
                   <AvatarFallback>
-                    {currentMail.name
+                    {emailData.sender.name
                       .split(" ")
                       .map((chunk) => chunk[0])
                       .join("")}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 space-y-1">
-                  <div className="font-semibold">{currentMail.name}</div>
+                  <div className="font-semibold">{emailData.sender.name}</div>
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <span>{currentMail.email}</span>
+                    <span>{emailData.sender.email}</span>
                     {isMuted && <BellOff className="h-4 w-4" />}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <time className="text-xs text-muted-foreground">
-                      {format(new Date(currentMail.date), "PPp")}
-                    </time>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-auto p-0 text-xs underline">
-                          Details
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[280px] space-y-2" align="start">
-                        <div className="text-xs">
-                          <span className="font-medium text-muted-foreground">From:</span>{" "}
-                          {currentMail.email}
-                        </div>
-                        <div className="text-xs">
-                          <span className="font-medium text-muted-foreground">Reply-To:</span>{" "}
-                          {currentMail.email}
-                        </div>
-                        <div className="text-xs">
-                          <span className="font-medium text-muted-foreground">To:</span>{" "}
-                          {currentMail.email}
-                        </div>
-                        <div className="text-xs">
-                          <span className="font-medium text-muted-foreground">Cc:</span>{" "}
-                          {currentMail.email}
-                        </div>
-                        <div className="text-xs">
-                          <span className="font-medium text-muted-foreground">Date:</span>{" "}
-                          {format(new Date(currentMail.date), "PPpp")}
-                        </div>
-                        <div className="text-xs">
-                          <span className="font-medium text-muted-foreground">Mailed-By:</span>{" "}
-                          {currentMail.email}
-                        </div>
-                        <div className="text-xs">
-                          <span className="font-medium text-muted-foreground">Signed-By:</span>{" "}
-                          {currentMail.email}
-                        </div>
-                        <div className="flex items-center gap-1 text-xs">
-                          <span className="font-medium text-muted-foreground">Security:</span>{" "}
-                          <Lock className="h-3 w-3" /> {currentMail.email}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
                   </div>
                 </div>
               </div>
@@ -236,8 +225,33 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
 
             <Separator />
 
-            <div className="px-8 py-4 pb-[200px]">
-              <div className="whitespace-pre-wrap text-sm leading-relaxed">{currentMail.text}</div>
+            <div className="h-full w-full p-0">
+              <div className="flex h-full w-full flex-1 flex-col p-0">
+                {emailData.blobUrl ? (
+                  <iframe
+                    key={emailData.id}
+                    src={emailData.blobUrl}
+                    className={cn(
+                      "w-full flex-1 border-none transition-opacity duration-200",
+                      isLoading ? "opacity-50" : "opacity-100",
+                    )}
+                    title="Email Content"
+                    sandbox="allow-same-origin"
+                    style={{
+                      minHeight: "500px",
+                      height: "100%",
+                      overflow: "auto",
+                    }}
+                  />
+                ) : (
+                  <div
+                    className="flex h-[500px] w-full items-center justify-center"
+                    style={{ minHeight: "500px" }}
+                  >
+                    <div className="h-32 w-32 animate-pulse rounded-full bg-secondary" />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -247,13 +261,13 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
                 <div className="flex items-center gap-2">
                   <Reply className="h-4 w-4" />
                   <p className="truncate">
-                    {currentMail?.name} ({currentMail?.email})
+                    {emailData.sender.name} ({emailData.sender.email})
                   </p>
                 </div>
               </div>
 
               <Textarea
-                className="min-h-[120px] w-full resize-none border-0 bg-[#18181A] leading-relaxed placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0 md:text-base"
+                className="min-h-[60px] w-full resize-none border-0 bg-[#18181A] leading-relaxed placeholder:text-muted-foreground/70 focus-visible:ring-0 focus-visible:ring-offset-0 md:text-base"
                 placeholder="Write your reply..."
                 spellCheck={true}
                 autoFocus

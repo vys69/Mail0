@@ -2,7 +2,12 @@
 import { $fetch, useSession } from "@/lib/auth-client";
 import { InitialThread, ParsedMessage } from "@/types";
 import { BASE_URL } from "@/lib/constants";
-import useSWR from "swr";
+import useSWR, { preload } from "swr";
+
+export const preloadThread = (userId: string, threadId: string) => {
+  console.log(`🔄 Prefetching email ${threadId}...`);
+  preload([userId, threadId], fetchEmail);
+};
 
 // TODO: improve the filters
 const fetchEmails = async (args: any[]) => {
@@ -48,7 +53,14 @@ export const useThreads = (folder: string, labelIds?: string[], query?: string, 
 
 export const useThread = (id: string) => {
   const { data: session } = useSession();
-  const { data, isLoading, error } = useSWR<ParsedMessage>([session?.user.id, id], fetchEmail);
+  const { data, isLoading, error } = useSWR<ParsedMessage>(
+    session?.user.id ? [session.user.id, id] : null,
+    fetchEmail,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    },
+  );
 
   return { data, isLoading, error };
 };
