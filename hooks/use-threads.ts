@@ -88,7 +88,7 @@ const fetchEmails = async (args: any[]) => {
     baseURL: BASE_URL,
     onSuccess(context) {
       // reversing the order of the messages to make sure the newest ones are at the top
-      threadsCache.bulkPut(context.data.messages.reverse(), searchParams.toString());
+      threadsCache.bulkPut(context.data.messages, searchParams.toString());
     },
   }).then((e) => e.data)) as RawResponse;
 };
