@@ -73,23 +73,6 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
-  const blobUrlRef = useRef<string | null>(null);
-
-  // Create blob URL when email data changes
-  useEffect(() => {
-    if (!emailData?.processedHtml) return;
-
-    const blob = new Blob([emailData.processedHtml], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    blobUrlRef.current = url;
-
-    return () => {
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current);
-        blobUrlRef.current = null;
-      }
-    };
-  }, [emailData?.processedHtml]);
 
   useEffect(() => {
     if (emailData) {
@@ -272,10 +255,10 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
 
             <div className="h-full w-full p-0">
               <div className="flex h-full w-full flex-1 flex-col p-0">
-                {blobUrlRef.current ? (
+                {emailData?.blobUrl ? (
                   <iframe
                     key={emailData.id}
-                    src={blobUrlRef.current}
+                    src={emailData.blobUrl}
                     className={cn(
                       "w-full flex-1 border-none transition-opacity duration-200",
                       isLoading ? "opacity-50" : "opacity-100",
