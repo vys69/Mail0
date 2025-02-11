@@ -53,7 +53,7 @@ const Thread = ({ id }: { id: string }) => {
               )}
             >
               {data.sender.name}{" "}
-              {data.unread ? <span className="size-2 rounded-full bg-red-500" /> : null}
+              {data.unread ? <span className="ml-1 size-2 rounded-full bg-blue-500" /> : null}
             </p>
           </div>
           <p className="pr-2 text-xs font-normal opacity-70 group-hover:opacity-100">Feb 10</p>
