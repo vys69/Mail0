@@ -74,7 +74,7 @@ const googleDriver = (config: IConfig): MailManager => {
       title: he.decode(snippet),
       tags: labelIds,
       sender: {
-        name: name.replace(/"/g, ""),
+        name: name.replace(/"/g, "").trim(),
         email: `<${email}`,
       },
       unread: labelIds.includes("UNREAD"),
@@ -178,13 +178,25 @@ const googleDriver = (config: IConfig): MailManager => {
         decodedBodyLength: decodedBody.length,
       });
 
+      // Create the full email data
       const parsedData = parse(res.data as any);
-      return {
+      const fullEmailData = {
         ...parsedData,
         body: bodyData,
         processedHtml,
         blobUrl: `data:text/html;charset=utf-8,${encodeURIComponent(processedHtml)}`,
       };
+
+      // Log the result for debugging
+      console.log("📧 Driver: Returning email data", {
+        id: fullEmailData.id,
+        hasBody: !!fullEmailData.body,
+        hasProcessedHtml: !!fullEmailData.processedHtml,
+        hasBlobUrl: !!fullEmailData.blobUrl,
+        blobUrlLength: fullEmailData.blobUrl.length,
+      });
+
+      return fullEmailData;
     },
 
     create: async (data: any) => {

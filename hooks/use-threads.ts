@@ -35,12 +35,15 @@ const fetchEmail = async (args: any[]) => {
 
     if (cachedData) {
       const parsed = JSON.parse(cachedData);
-      // Only use cache if it has processedHtml
-      if (parsed.processedHtml) {
-        console.log(`📦 Using cached data for email ${id}`);
+      // Only use cache if it has all required fields
+      if (parsed.processedHtml && parsed.blobUrl) {
+        console.log(`📦 Using cached data for email ${id}`, {
+          hasProcessedHtml: !!parsed.processedHtml,
+          hasBlobUrl: !!parsed.blobUrl,
+        });
         return parsed;
       } else {
-        console.log(`🔄 Cache miss (no HTML) for email ${id}, fetching fresh data...`);
+        console.log(`🔄 Cache miss (incomplete data) for email ${id}, fetching fresh data...`);
       }
     }
 
@@ -59,14 +62,20 @@ const fetchEmail = async (args: any[]) => {
 
     const data = await response.json();
 
-    if (!data.processedHtml) {
-      console.error(`❌ No processed HTML in response for email ${id}`);
-      throw new Error("No processed HTML in response");
+    // Validate the response data
+    if (!data.processedHtml || !data.blobUrl) {
+      console.error(`❌ Invalid email data for ${id}`, {
+        hasProcessedHtml: !!data.processedHtml,
+        hasBlobUrl: !!data.blobUrl,
+      });
+      throw new Error("Invalid email data received");
     }
 
     console.log(`✅ Successfully fetched email ${id}`, {
       hasProcessedHtml: true,
+      hasBlobUrl: true,
       contentLength: data.processedHtml.length,
+      blobUrlLength: data.blobUrl.length,
     });
 
     // Cache the complete data
