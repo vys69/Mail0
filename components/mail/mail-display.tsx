@@ -11,9 +11,11 @@ import {
   Lock,
   Send,
   FileIcon,
+  Copy,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns/format";
+import sanitizeHtml from "sanitize-html";
 import { cn } from "@/lib/utils";
 import React from "react";
 
@@ -30,29 +32,134 @@ import { useMail } from "./use-mail";
 import { Badge } from "../ui/badge";
 import Image from "next/image";
 
+interface MailResponse {
+  id: string;
+  title: string;
+  tags: string[];
+  sender: {
+    name: string;
+    email: string;
+  };
+  unread: boolean;
+  receivedOn: string;
+  body: string; // base64 encoded HTML
+}
+
 interface MailDisplayProps {
   mail: string | null;
   onClose?: () => void;
   isMobile?: boolean;
 }
 
+function fromBinary(str: string) {
+  return decodeURIComponent(
+    atob(str.replace(/-/g, "+").replace(/_/g, "/"))
+      .split("")
+      .map(function (c) {
+        return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+      })
+      .join(""),
+  );
+}
+
 export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
   const [, setMail] = useMail();
-  const [currentMail] = useState<Mail | null>();
+  const [emailData, setEmailData] = useState<MailResponse | null>(null);
+  const [decodedBody, setDecodedBody] = useState<string>("");
   const [isMuted, setIsMuted] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
-    // find email and parse body and set it
-    // setCurrentMail(mail);
+    async function fetchEmail() {
+      if (!mail) return;
+
+      try {
+        const response = await fetch(`/api/v1/mail/${mail}`);
+        if (!response.ok) throw new Error("Failed to fetch email");
+
+        const data = await response.json();
+        setEmailData(data);
+        console.log("Email data:", data); // For debugging
+      } catch (error) {
+        console.error("Error fetching email:", error);
+      }
+    }
+
+    fetchEmail();
   }, [mail]);
 
   useEffect(() => {
-    if (currentMail) {
-      setIsMuted(currentMail.muted ?? false);
+    if (emailData) {
+      setIsMuted(emailData.unread ?? false);
     }
-  }, [currentMail]);
+  }, [emailData]);
+
+  useEffect(() => {
+    if (emailData?.body) {
+      // Use the new fromBinary function to properly decode the body
+      const ALLOWED_TAGS = [
+        // Common email tags
+        "div",
+        "p",
+        "span",
+        "a",
+        "img",
+        "table",
+        "tr",
+        "td",
+        "th",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "ul",
+        "ol",
+        "li",
+        "br",
+        "b",
+        "strong",
+        "i",
+        "em",
+        "style",
+      ];
+
+      try {
+        const decoded = fromBinary(emailData.body);
+        const sanitized = sanitizeHtml(decoded, {
+          allowedTags: ALLOWED_TAGS,
+          allowedAttributes: {
+            "*": ["class", "id", "style"], // Allow style on everything
+            img: ["src", "alt", "title", "width", "height"],
+            a: ["href", "target", "rel"],
+          },
+          allowedStyles: {
+            "*": {
+              // Allow all styles on all elements
+              "*": [/.*/], // Regex that matches everything
+            },
+          },
+          allowedSchemes: ["http", "https", "mailto", "tel"], // Only allow safe URL schemes
+          transformTags: {
+            a: (tagName, attribs) => ({
+              tagName,
+              attribs: {
+                ...attribs,
+                target: "_blank",
+                rel: "noopener noreferrer",
+              },
+            }),
+          },
+        });
+        setDecodedBody(sanitized);
+      } catch (error) {
+        console.error("Error decoding email body:", error);
+      }
+    }
+  }, [emailData]);
 
   const handleClose = useCallback(() => {
     onClose?.();
@@ -94,7 +201,19 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
     return `${name.slice(0, maxLength)}...`;
   };
 
-  if (!currentMail) return null;
+  const handleCopy = async () => {
+    if (emailData) {
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(emailData, null, 2));
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000); // Reset after 2 seconds
+      } catch (err) {
+        console.error("Failed to copy:", err);
+      }
+    }
+  };
+
+  if (!emailData) return <div>Loading...</div>;
 
   return (
     <div className="flex h-full flex-col">
@@ -107,7 +226,7 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
                   <Button
                     variant="ghost"
                     className="md:h-fit md:px-2"
-                    disabled={!currentMail}
+                    disabled={!emailData}
                     onClick={handleClose}
                   >
                     <X className="h-4 w-4" />
@@ -117,14 +236,28 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
                 <TooltipContent>Close</TooltipContent>
               </Tooltip>
             )}
-            <div className="flex-1 truncate text-sm font-medium">
-              {currentMail?.subject || "No message selected"}
+            <div className="max-w-[300px] flex-1 truncate text-sm font-medium">
+              {emailData.title || "No subject"}
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!currentMail}>
+                <Button
+                  variant="ghost"
+                  className="md:h-fit md:px-2"
+                  disabled={!emailData}
+                  onClick={handleCopy}
+                >
+                  <Copy className="h-4 w-4" />
+                  <span className="sr-only">Copy email data</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{copySuccess ? "Copied!" : "Copy email data"}</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!emailData}>
                   <Archive className="h-4 w-4" />
                   <span className="sr-only">Archive</span>
                 </Button>
@@ -133,7 +266,7 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!currentMail}>
+                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!emailData}>
                   <Reply className="h-4 w-4" />
                   <span className="sr-only">Reply</span>
                 </Button>
@@ -142,7 +275,7 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
             </Tooltip>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!currentMail}>
+                <Button variant="ghost" className="md:h-fit md:px-2" disabled={!emailData}>
                   <MoreVertical className="h-4 w-4" />
                   <span className="sr-only">More</span>
                 </Button>
@@ -170,65 +303,19 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
             <div className="flex flex-col gap-4 px-4 py-4">
               <div className="flex items-start gap-3">
                 <Avatar>
-                  <AvatarImage alt={currentMail.name} />
+                  <AvatarImage alt={emailData.sender.name} />
                   <AvatarFallback>
-                    {currentMail.name
+                    {emailData.sender.name
                       .split(" ")
                       .map((chunk) => chunk[0])
                       .join("")}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 space-y-1">
-                  <div className="font-semibold">{currentMail.name}</div>
+                  <div className="font-semibold">{emailData.sender.name}</div>
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <span>{currentMail.email}</span>
+                    <span>{emailData.sender.email}</span>
                     {isMuted && <BellOff className="h-4 w-4" />}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <time className="text-xs text-muted-foreground">
-                      {format(new Date(currentMail.date), "PPp")}
-                    </time>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-auto p-0 text-xs underline">
-                          Details
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[280px] space-y-2" align="start">
-                        <div className="text-xs">
-                          <span className="font-medium text-muted-foreground">From:</span>{" "}
-                          {currentMail.email}
-                        </div>
-                        <div className="text-xs">
-                          <span className="font-medium text-muted-foreground">Reply-To:</span>{" "}
-                          {currentMail.email}
-                        </div>
-                        <div className="text-xs">
-                          <span className="font-medium text-muted-foreground">To:</span>{" "}
-                          {currentMail.email}
-                        </div>
-                        <div className="text-xs">
-                          <span className="font-medium text-muted-foreground">Cc:</span>{" "}
-                          {currentMail.email}
-                        </div>
-                        <div className="text-xs">
-                          <span className="font-medium text-muted-foreground">Date:</span>{" "}
-                          {format(new Date(currentMail.date), "PPpp")}
-                        </div>
-                        <div className="text-xs">
-                          <span className="font-medium text-muted-foreground">Mailed-By:</span>{" "}
-                          {currentMail.email}
-                        </div>
-                        <div className="text-xs">
-                          <span className="font-medium text-muted-foreground">Signed-By:</span>{" "}
-                          {currentMail.email}
-                        </div>
-                        <div className="flex items-center gap-1 text-xs">
-                          <span className="font-medium text-muted-foreground">Security:</span>{" "}
-                          <Lock className="h-3 w-3" /> {currentMail.email}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
                   </div>
                 </div>
               </div>
@@ -237,7 +324,10 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
             <Separator />
 
             <div className="px-8 py-4 pb-[200px]">
-              <div className="whitespace-pre-wrap text-sm leading-relaxed">{currentMail.text}</div>
+              <div
+                className="prose prose-sm dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: decodedBody }}
+              />
             </div>
           </div>
 
@@ -247,7 +337,7 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
                 <div className="flex items-center gap-2">
                   <Reply className="h-4 w-4" />
                   <p className="truncate">
-                    {currentMail?.name} ({currentMail?.email})
+                    {emailData?.sender.name} ({emailData?.sender.email})
                   </p>
                 </div>
               </div>
