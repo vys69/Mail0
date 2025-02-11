@@ -255,7 +255,7 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
 
             <div className="h-full w-full p-0">
               <div className="flex h-full w-full flex-1 flex-col p-0">
-                {emailData?.blobUrl ? (
+                {emailData.blobUrl ? (
                   <iframe
                     key={emailData.id}
                     src={emailData.blobUrl}
