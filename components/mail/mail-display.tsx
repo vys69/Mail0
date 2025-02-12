@@ -290,7 +290,7 @@ export function MailDisplay({ mail, onClose, isMobile }: MailDisplayProps) {
         </div>
 
         {!isFullscreen && (
-          <div className="absolute bottom-0 left-0 right-0 z-10 bg-background px-4 pb-4 pt-2">
+          <div className="relative bottom-0 left-0 right-0 z-10 bg-background px-4 pb-4 pt-2">
             <form className="relative space-y-2.5 rounded-[calc(var(--radius)-2px)] border bg-secondary/50 p-4 shadow-sm">
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
